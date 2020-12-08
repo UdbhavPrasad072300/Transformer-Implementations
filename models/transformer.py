@@ -5,7 +5,11 @@ import torch.nn.functional as F
 import math
 
 
-# Source: https://pytorch.org/tutorials/beginner/transformer_tutorial
+def attention(q, k, v, d_k, mask=None):
+    scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
+    return
+
+
 class PositionalEncoding(nn.Module):
     def __init__(self, max_seq_len=2000, embedding_size=300, dropout=0.2, device="cpu"):
         super(PositionalEncoding, self).__init__()
@@ -17,7 +21,8 @@ class PositionalEncoding(nn.Module):
 
         position = torch.arange(0, max_seq_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, embedding_size, 2).float() * (-math.log(10000.0) / embedding_size))
-        self.pe_matrix[:, 0::2] = torch.sin(position * div_term)
+        self.pe_matrix[:, 0::2] = torch.sin(
+            position * div_term)  # Source: https://pytorch.org/tutorials/beginner/transformer_tutorial
         self.pe_matrix[:, 1::2] = torch.cos(position * div_term)
 
         self.pe_matrix = self.pe_matrix.unsqueeze(0).transpose(0, 1)
@@ -28,6 +33,34 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe_matrix[:x.size(0), :]
         x = self.dropout(x)
         return x
+
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, embed_size, num_heads, dropout=0.2):
+        super(MultiHeadAttention, self).__init__()
+
+        self.embed_size = embed_size
+        self.num_heads = num_heads
+        self.dropout = nn.Dropout(dropout)
+
+        self.head_size = self.embed_size // self.num_heads
+
+        assert self.head_size * self.num_heads == self.embed_size, "Heads cannot split Embedding size equally"
+
+        self.Q = nn.Linear(self.embed_size, self.embed_size)
+        self.K = nn.Linear(self.embed_size, self.embed_size)
+        self.V = nn.Linear(self.embed_size, self.embed_size)
+
+        self.out = nn.Linear(self.embed_size, self.embed_size)
+
+    def forward(self, q, k, v, mask=None):
+        batch_size = q.size(0)
+
+        q = self.Q(q).reshape(batch_size, -1, self.num_heads, self.head_size).transpose(1, 2)
+        k = self.K(k).reshape(batch_size, -1, self.num_heads, self.head_size).transpose(1, 2)
+        v = self.V(v).reshape(batch_size, -1, self.num_heads, self.head_size).transpose(1, 2)
+
+        return
 
 
 class Transformer(nn.Module):
