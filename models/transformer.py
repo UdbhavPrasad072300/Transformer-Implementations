@@ -5,9 +5,18 @@ import torch.nn.functional as F
 import math
 
 
-def attention(q, k, v, d_k, mask=None):
+def attention(q, k, v, d_k, mask=None, dropout=0.2):
     scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
-    return
+
+    if mask is not None:
+        mask = mask.unsqueeze(1)
+        scores = scores.masked_fill(mask == 0, -1e9)
+
+    scores = F.softmax(scores, dim=-1)
+    scores = dropout(scores)
+    out = torch.matmul(scores, v)
+
+    return out
 
 
 class PositionalEncoding(nn.Module):
@@ -21,8 +30,7 @@ class PositionalEncoding(nn.Module):
 
         position = torch.arange(0, max_seq_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, embedding_size, 2).float() * (-math.log(10000.0) / embedding_size))
-        self.pe_matrix[:, 0::2] = torch.sin(
-            position * div_term)  # Source: https://pytorch.org/tutorials/beginner/transformer_tutorial
+        self.pe_matrix[:, 0::2] = torch.sin(position * div_term)  # Source: https://pytorch.org/tutorials/beginner/transformer_tutorial
         self.pe_matrix[:, 1::2] = torch.cos(position * div_term)
 
         self.pe_matrix = self.pe_matrix.unsqueeze(0).transpose(0, 1)
@@ -51,7 +59,7 @@ class MultiHeadAttention(nn.Module):
         self.K = nn.Linear(self.embed_size, self.embed_size)
         self.V = nn.Linear(self.embed_size, self.embed_size)
 
-        self.out = nn.Linear(self.embed_size, self.embed_size)
+        self.linear = nn.Linear(self.embed_size, self.embed_size)
 
     def forward(self, q, k, v, mask=None):
         batch_size = q.size(0)
@@ -60,7 +68,11 @@ class MultiHeadAttention(nn.Module):
         k = self.K(k).reshape(batch_size, -1, self.num_heads, self.head_size).transpose(1, 2)
         v = self.V(v).reshape(batch_size, -1, self.num_heads, self.head_size).transpose(1, 2)
 
-        return
+        scores = attention(q, k, v, self.num_heads, mask)
+        concatenated = scores.transpose(1, 2).reshape(batch_size, -1, self.embed_size)
+        out = self.linear(concatenated)
+
+        return out
 
 
 class Transformer(nn.Module):
