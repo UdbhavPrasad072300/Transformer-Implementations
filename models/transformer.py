@@ -105,6 +105,47 @@ class Transformer_Encoder_Layer(nn.Module):
         return x
 
 
+class Transformer_Decoder_Layer(nn.Module):
+    def __init__(self):
+        super(Transformer_Decoder_Layer, self).__init__()
+
+        self.masked_multiheadattention = None
+        self.multiheadattention = None
+
+        self.Norm1 = None
+        self.Norm2 = None
+        self.Norm3 = None
+
+        self.feed_forward = None
+
+    def forward(self, x, y):
+        return
+
+
+class Transformer_Encoder(nn.Module):
+    def __init__(self):
+        super(Transformer_Encoder, self).__init__()
+
+    def forward(self):
+        return
+
+
+class Transformer_Decoder(nn.Module):
+    def __init__(self):
+        super(Transformer_Decoder, self).__init__()
+
+    def forward(self):
+        return
+
+
+class Transformer_Implemented(nn.Module):
+    def __init__(self):
+        super(Transformer_Implemented, self).__init__()
+
+    def forward(self):
+        return
+
+
 class Transformer(nn.Module):
     def __init__(self, s_vocab_size, t_vocab_size, embed_size, num_head, num_ff, encode_layers, decode_layers,
                  dropout=0.2, device="cpu"):
