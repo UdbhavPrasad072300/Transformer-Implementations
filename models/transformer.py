@@ -175,7 +175,7 @@ class Transformer(nn.Module):
         self.decoder = nn.TransformerDecoder(self.decoder_layer, self.decoder_num_layers)
 
         self.final = nn.Linear(self.embed_size, self.t_vocab_size)
-        self.log_softmax = nn.LogSoftmax()
+        self.softmax = nn.Softmax()
 
     def forward(self, x, y):
         x = self.encoder_embed(x) * math.sqrt(self.embed_size)
@@ -189,4 +189,6 @@ class Transformer(nn.Module):
         out = self.decoder(y, memory)
 
         x = self.final(out)
+        x = self.softmax(x)
+        
         return x
