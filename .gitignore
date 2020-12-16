@@ -131,6 +131,7 @@ dmypy.json
 .idea/
 
 .data/
+data/
 
 .trained_models/
 *.pt
