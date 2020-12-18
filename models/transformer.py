@@ -193,3 +193,82 @@ class Transformer(nn.Module):
         x = self.softmax(x)
         
         return x
+
+
+class VisionEncoder(nn.Module):
+    def __init__(self, embed_size, num_heads, hidden_size, dropout=0.1):
+        super(VisionEncoder, self).__init__()
+
+        self.embed_size = embed_size
+        self.num_heads = num_heads
+        self.hidden_size = hidden_size
+        self.dropout = dropout
+
+        self.norm1 = nn.LayerNorm(self.embed_size)
+        self.norm2 = nn.LayerNorm(self.embed_size)
+
+        self.attention = MultiHeadAttention(self.embed_size, self.num_heads, dropout=dropout)
+
+        self.ff = nn.Sequential(
+            nn.Linear(self.embed_size, self.hidden_size),
+            nn.LeakyReLU(),
+            nn.Dropout(self.dropout),
+            nn.Linear(self.hidden_size, self.embed_size),
+            nn.Dropout(self.dropout)
+        )
+
+    def forward(self, x):
+        x = self.norm1(x)
+        x = x + self.attention(x, x, x)
+        x = x + self.ff(self.norm2(x))
+        return x
+
+
+class ViT(nn.Module):
+    def __init__(self, image_size, channel_size, patch_size, embed_size, num_heads, classes, num_layers, hidden_size,
+                 dropout=0.1):
+        super(ViT, self).__init__()
+
+        self.p = patch_size
+        self.image_size = image_size
+        self.embed_size = embed_size
+        self.num_patches = (image_size // patch_size) ** 2
+        self.patch_size = channel_size * patch_size ** 2
+        self.num_heads = num_heads
+        self.classes = classes
+        self.num_layers = num_layers
+        self.hidden_size = hidden_size
+        self.dropout = nn.Dropout(dropout)
+
+        self.embeddings = nn.Linear(self.patch_size, self.embed_size)
+        self.class_token = nn.Parameter(torch.randn(1, 1, self.embed_size))
+
+        self.encoders = nn.ModuleList([])
+        for layer in range(self.num_layers):
+            self.encoders.append(VisionEncoder(self.embed_size, self.num_heads, self.hidden_size, dropout))
+
+        self.norm = nn.LayerNorm(self.embed_size)
+
+        self.classifier = nn.Sequential(
+            nn.Linear(self.embed_size, self.classes)
+        )
+
+    def forward(self, x):
+        b, c, h, w = x.size()
+
+        x = x.reshape(b, int((h / self.p) * (w / self.p)), c * self.p * self.p)
+        x = self.embeddings(x)
+
+        b, n, e = x.size()
+        class_tokens = self.class_token.expand(b, 1, e)
+
+        x = torch.cat((x, class_tokens), dim=1)
+
+        for encoder in self.encoders:
+            x = encoder(x)
+
+        x = x[:, 0, :]
+
+        x = F.log_softmax(self.classifier(self.norm(x)), dim=-1)
+
+        return x
