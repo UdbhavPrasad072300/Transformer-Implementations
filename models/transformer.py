@@ -52,7 +52,8 @@ class MultiHeadAttention(nn.Module):
 
         self.embed_size = embed_size
         self.num_heads = num_heads
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = dropout
+        self.dropout_layer = nn.Dropout(dropout)
 
         self.head_size = self.embed_size // self.num_heads
 
