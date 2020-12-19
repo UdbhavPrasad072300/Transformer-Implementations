@@ -79,9 +79,9 @@ class MultiHeadAttention(nn.Module):
         return out
 
 
-class Transformer_Encoder_Layer(nn.Module):
+class Transformer_Encoder(nn.Module):
     def __init__(self, embed_size, num_heads, ff_hidden_size, dropout=0.2, device="cpu"):
-        super(Transformer_Encoder_Layer, self).__init__()
+        super(Transformer_Encoder, self).__init__()
 
         self.embed_size = embed_size
         self.num_heads = num_heads
@@ -106,9 +106,9 @@ class Transformer_Encoder_Layer(nn.Module):
         return x
 
 
-class Transformer_Decoder_Layer(nn.Module):
+class Transformer_Decoder(nn.Module):
     def __init__(self):
-        super(Transformer_Decoder_Layer, self).__init__()
+        super(Transformer_Decoder, self).__init__()
 
         self.masked_multiheadattention = None
         self.multiheadattention = None
@@ -120,22 +120,6 @@ class Transformer_Decoder_Layer(nn.Module):
         self.feed_forward = None
 
     def forward(self, x, y):
-        return
-
-
-class Transformer_Encoder(nn.Module):
-    def __init__(self):
-        super(Transformer_Encoder, self).__init__()
-
-    def forward(self):
-        return
-
-
-class Transformer_Decoder(nn.Module):
-    def __init__(self):
-        super(Transformer_Decoder, self).__init__()
-
-    def forward(self):
         return
 
 
