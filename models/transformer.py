@@ -107,28 +107,82 @@ class Transformer_Encoder(nn.Module):
 
 
 class Transformer_Decoder(nn.Module):
-    def __init__(self):
+    def __init__(self, embed_size, num_head, num_ff, dropout=0.1):
         super(Transformer_Decoder, self).__init__()
 
-        self.masked_multiheadattention = None
-        self.multiheadattention = None
+        self.embed_size = embed_size
+        self.num_head = num_head
+        self.num_ff = num_ff
+        self.dropout = dropout
 
-        self.Norm1 = None
-        self.Norm2 = None
-        self.Norm3 = None
+        self.masked_multiheadattention = MultiHeadAttention(self.embed_size, self.num_head, self.dropout)
+        self.multiheadattention = MultiHeadAttention(self.embed_size, self.num_head, self.dropout)
 
-        self.feed_forward = None
+        self.Norm1 = nn.LayerNorm(self.embed_size)
+        self.Norm2 = nn.LayerNorm(self.embed_size)
+        self.Norm3 = nn.LayerNorm(self.embed_size)
 
-    def forward(self, x, y):
-        return
+        self.feed_forward = nn.Sequential(
+            nn.Linear(self.embed_size, self.ff_hidden_size),
+            nn.ReLU(),
+            nn.Linear(self.ff_hidden_size, self.embed_size),
+            nn.Dropout(self.dropout),
+        )
+
+    def forward(self, x, y, mask=None):
+        y = y + self.Norm1(self.masked_multiheadattention(y, y, y))
+        x = y + self.Norm2(self.multiheadattention(x, x, y))
+        x = x + self.Norm3(self.feed_forward(x))
+        return x
 
 
 class Transformer_Implemented(nn.Module):
-    def __init__(self):
+    def __init__(self, s_vocab_size, t_vocab_size, embed_size, num_head, num_ff, encode_layers, decode_layers,
+                 dropout=0.2, device="cpu"):
         super(Transformer_Implemented, self).__init__()
 
-    def forward(self):
-        return
+        self.s_vocab_size = s_vocab_size
+        self.t_vocab_size = t_vocab_size
+        self.embed_size = embed_size
+        self.num_head = num_head
+        self.num_ff = num_ff
+        self.encoder_num_layers = encode_layers
+        self.decoder_num_layers = decode_layers
+        self.dropout = dropout
+        self.device = device
+
+        self.encoder_embed = nn.Embedding(self.s_vocab_size, embed_size)
+        self.decoder_embed = nn.Embedding(self.t_vocab_size, embed_size)
+        self.encoder_positional_encoding = PositionalEncoding(self.s_vocab_size, self.embed_size, device=device)
+        self.decoder_positional_encoding = PositionalEncoding(self.t_vocab_size, self.embed_size, device=device)
+
+        self.encoders = nn.ModuleList([])
+        for layer in range(self.encoder_num_layers):
+            self.encoders.append(Transformer_Encoder(self.embed_size, self.num_heads, self.hidden_size, dropout))
+
+        self.decoders = nn.ModuleList([])
+        for layer in range(self.decoder_num_layers):
+            self.decoders.append(Transformer_Decoder(self.embed_size, self.num_heads, self.hidden_size, dropout))
+
+        self.final = nn.Linear(self.embed_size, self.t_vocab_size)
+        self.softmax = nn.Softmax()
+
+    def forward(self, x, y, mask=None):
+        x = self.encoder_embed(x) * math.sqrt(self.embed_size)
+        y = self.decoder_embed(y) * math.sqrt(self.embed_size)
+
+        x = self.encoder_positional_encoding(x)
+        y = self.decoder_positional_encoding(y)
+
+        for encoder in self.encoders:
+            x = encoder(x)
+
+        for decoder in self.decoders:
+            x = decoder(x, y)
+
+        x = self.final(x)
+
+        return self.softmax(x)
 
 
 class Transformer(nn.Module):
