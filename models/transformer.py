@@ -8,6 +8,8 @@ import math
 def attention(q, k, v, d_k, mask=None, dropout=0.2):
     dropout_layer = nn.Dropout(dropout)
 
+    # print(q.size(), k.size(), v.size())
+
     scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
 
     if mask is not None:
@@ -16,6 +18,7 @@ def attention(q, k, v, d_k, mask=None, dropout=0.2):
 
     scores = F.softmax(scores, dim=-1)
     scores = dropout_layer(scores)
+    # print(scores.size(), v.size())
     out = torch.matmul(scores, v)
 
     return out
@@ -101,7 +104,7 @@ class Transformer_Encoder(nn.Module):
         )
 
     def forward(self, x, mask=None):
-        x = self.Norm1(x + self.multi_attention(x, x, x, mask, self.dropout))
+        x = self.Norm1(x + self.multi_attention(x, x, x, mask))
         x = self.Norm2(x + self.feed_forward(x))
         return x
 
@@ -123,9 +126,9 @@ class Transformer_Decoder(nn.Module):
         self.Norm3 = nn.LayerNorm(self.embed_size)
 
         self.feed_forward = nn.Sequential(
-            nn.Linear(self.embed_size, self.ff_hidden_size),
+            nn.Linear(self.embed_size, self.num_ff),
             nn.ReLU(),
-            nn.Linear(self.ff_hidden_size, self.embed_size),
+            nn.Linear(self.num_ff, self.embed_size),
             nn.Dropout(self.dropout),
         )
 
@@ -137,17 +140,18 @@ class Transformer_Decoder(nn.Module):
 
 
 class Transformer_Implemented(nn.Module):
-    def __init__(self, s_vocab_size, t_vocab_size, embed_size, num_head, num_ff, encode_layers, decode_layers,
-                 dropout=0.2, device="cpu"):
+    def __init__(self, s_vocab_size, t_vocab_size, embed_size, num_heads, num_ff, encode_layers, decode_layers,
+                 hidden_size, dropout=0.2, device="cpu"):
         super(Transformer_Implemented, self).__init__()
 
         self.s_vocab_size = s_vocab_size
         self.t_vocab_size = t_vocab_size
         self.embed_size = embed_size
-        self.num_head = num_head
+        self.num_heads = num_heads
         self.num_ff = num_ff
         self.encoder_num_layers = encode_layers
         self.decoder_num_layers = decode_layers
+        self.hidden_size = hidden_size
         self.dropout = dropout
         self.device = device
 
@@ -165,7 +169,7 @@ class Transformer_Implemented(nn.Module):
             self.decoders.append(Transformer_Decoder(self.embed_size, self.num_heads, self.hidden_size, dropout))
 
         self.final = nn.Linear(self.embed_size, self.t_vocab_size)
-        self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x, y, mask=None):
         x = self.encoder_embed(x) * math.sqrt(self.embed_size)
@@ -229,7 +233,7 @@ class Transformer(nn.Module):
 
         x = self.final(out)
         x = self.softmax(x)
-        
+
         return x
 
 
