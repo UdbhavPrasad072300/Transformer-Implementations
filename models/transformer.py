@@ -101,8 +101,8 @@ class Transformer_Encoder(nn.Module):
         )
 
     def forward(self, x, mask=None):
-        x += self.Norm1(self.multi_attention(x, x, x, mask, self.dropout))
-        x += self.Norm2(self.feed_forward(x))
+        x = self.Norm1(x + self.multi_attention(x, x, x, mask, self.dropout))
+        x = self.Norm2(x + self.feed_forward(x))
         return x
 
 
@@ -130,9 +130,9 @@ class Transformer_Decoder(nn.Module):
         )
 
     def forward(self, x, y, mask=None):
-        y = y + self.Norm1(self.masked_multiheadattention(y, y, y))
-        x = y + self.Norm2(self.multiheadattention(x, x, y))
-        x = x + self.Norm3(self.feed_forward(x))
+        y = self.Norm1(y + self.masked_multiheadattention(y, y, y))
+        x = self.Norm2(y + self.multiheadattention(x, x, y))
+        x = self.Norm3(x + self.feed_forward(x))
         return x
 
 
