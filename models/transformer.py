@@ -7,7 +7,6 @@ import math
 
 def attention(q, k, v, d_k, mask=None, dropout=0.2):
     dropout_layer = nn.Dropout(dropout)
-
     scores = torch.einsum("bqhe,bkhe->bhqk", [q, k]) / math.sqrt(d_k)
 
     if mask is not None:
@@ -48,7 +47,6 @@ class MultiHeadAttention(nn.Module):
         q = self.Q(q).reshape(q_batch_size, q_seq_len, self.num_heads, self.head_size)
         k = self.K(k).reshape(k_batch_size, k_seq_len, self.num_heads, self.head_size)
         v = self.V(v).reshape(v_batch_size, v_seq_len, self.num_heads, self.head_size)
-
         scores = attention(q, k, v, self.num_heads, mask, self.dropout)
         concatenated = scores.reshape(v_batch_size, -1, self.embed_size)
         out = self.linear(concatenated)
