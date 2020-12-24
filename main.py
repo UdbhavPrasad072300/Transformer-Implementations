@@ -14,7 +14,7 @@ if __name__ == "__main__":
     target_vocab_size = 1200
     embed_size = 512
     num_head = 8
-    num_ff = 300
+    num_ff = 1024
     encoder_layers = 1
     decoder_layers = 1
     hidden_size = 256

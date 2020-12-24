@@ -96,16 +96,18 @@ class Transformer_Encoder(nn.Module):
         self.Norm2 = nn.LayerNorm(self.embed_size)
 
         self.multi_attention = MultiHeadAttention(self.embed_size, self.num_heads, self.dropout)
+
         self.feed_forward = nn.Sequential(
             nn.Linear(self.embed_size, self.ff_hidden_size),
             nn.ReLU(),
-            nn.Linear(self.ff_hidden_size, self.embed_size),
-            nn.Dropout(self.dropout),
+            nn.Linear(self.ff_hidden_size, self.embed_size)
         )
 
+        self.dropout_layer = nn.Dropout(self.dropout)
+
     def forward(self, x, mask=None):
-        x = self.Norm1(x + self.multi_attention(x, x, x, mask))
-        x = self.Norm2(x + self.feed_forward(x))
+        x = self.dropout_layer(self.Norm1(x + self.multi_attention(x, x, x, mask)))
+        x = self.dropout_layer(self.Norm2(x + self.feed_forward(x)))
         return x
 
 
@@ -125,17 +127,18 @@ class Transformer_Decoder(nn.Module):
         self.Norm2 = nn.LayerNorm(self.embed_size)
         self.Norm3 = nn.LayerNorm(self.embed_size)
 
+        self.dropout_layer = nn.Dropout(self.dropout)
+
         self.feed_forward = nn.Sequential(
             nn.Linear(self.embed_size, self.num_ff),
             nn.ReLU(),
-            nn.Linear(self.num_ff, self.embed_size),
-            nn.Dropout(self.dropout),
+            nn.Linear(self.num_ff, self.embed_size)
         )
 
     def forward(self, x, y, mask=None):
-        y = self.Norm1(y + self.masked_multiheadattention(y, y, y))
-        x = self.Norm2(y + self.multiheadattention(x, x, y))
-        x = self.Norm3(x + self.feed_forward(x))
+        y = self.dropout_layer(self.Norm1(y + self.masked_multiheadattention(y, y, y, mask)))
+        x = self.dropout_layer(self.Norm2(y + self.multiheadattention(y, x, x, mask)))
+        x = self.dropout_layer(self.Norm3(x + self.feed_forward(x)))
         return x
 
 
