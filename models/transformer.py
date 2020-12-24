@@ -8,9 +8,7 @@ import math
 def attention(q, k, v, d_k, mask=None, dropout=0.2):
     dropout_layer = nn.Dropout(dropout)
 
-    # print(q.size(), k.size(), v.size())
-
-    scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
+    scores = torch.einsum("bqhe,bkhe->bhqk", [q, k]) / math.sqrt(d_k)
 
     if mask is not None:
         mask = mask.unsqueeze(1)
@@ -18,10 +16,44 @@ def attention(q, k, v, d_k, mask=None, dropout=0.2):
 
     scores = F.softmax(scores, dim=-1)
     scores = dropout_layer(scores)
-    # print(scores.size(), v.size())
-    out = torch.matmul(scores, v)
+    out = torch.einsum("bhql,blhd->bqhd", [scores, v])
 
     return out
+
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, embed_size, num_heads, dropout=0.2):
+        super(MultiHeadAttention, self).__init__()
+
+        self.embed_size = embed_size
+        self.num_heads = num_heads
+        self.dropout = dropout
+        self.dropout_layer = nn.Dropout(dropout)
+
+        self.head_size = self.embed_size // self.num_heads
+
+        assert self.head_size * self.num_heads == self.embed_size, "Heads cannot split Embedding size equally"
+
+        self.Q = nn.Linear(self.embed_size, self.embed_size)
+        self.K = nn.Linear(self.embed_size, self.embed_size)
+        self.V = nn.Linear(self.embed_size, self.embed_size)
+
+        self.linear = nn.Linear(self.embed_size, self.embed_size)
+
+    def forward(self, q, k, v, mask=None):
+        q_batch_size, q_seq_len, q_embed_size = q.size()
+        k_batch_size, k_seq_len, k_embed_size = k.size()
+        v_batch_size, v_seq_len, v_embed_size = v.size()
+
+        q = self.Q(q).reshape(q_batch_size, q_seq_len, self.num_heads, self.head_size)
+        k = self.K(k).reshape(k_batch_size, k_seq_len, self.num_heads, self.head_size)
+        v = self.V(v).reshape(v_batch_size, v_seq_len, self.num_heads, self.head_size)
+
+        scores = attention(q, k, v, self.num_heads, mask, self.dropout)
+        concatenated = scores.reshape(v_batch_size, -1, self.embed_size)
+        out = self.linear(concatenated)
+
+        return out
 
 
 class PositionalEncoding(nn.Module):
@@ -47,39 +79,6 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe_matrix[:x.size(0), :]
         x = self.dropout(x)
         return x
-
-
-class MultiHeadAttention(nn.Module):
-    def __init__(self, embed_size, num_heads, dropout=0.2):
-        super(MultiHeadAttention, self).__init__()
-
-        self.embed_size = embed_size
-        self.num_heads = num_heads
-        self.dropout = dropout
-        self.dropout_layer = nn.Dropout(dropout)
-
-        self.head_size = self.embed_size // self.num_heads
-
-        assert self.head_size * self.num_heads == self.embed_size, "Heads cannot split Embedding size equally"
-
-        self.Q = nn.Linear(self.embed_size, self.embed_size)
-        self.K = nn.Linear(self.embed_size, self.embed_size)
-        self.V = nn.Linear(self.embed_size, self.embed_size)
-
-        self.linear = nn.Linear(self.embed_size, self.embed_size)
-
-    def forward(self, q, k, v, mask=None):
-        batch_size = q.size(0)
-
-        q = self.Q(q).reshape(batch_size, -1, self.num_heads, self.head_size).transpose(1, 2)
-        k = self.K(k).reshape(batch_size, -1, self.num_heads, self.head_size).transpose(1, 2)
-        v = self.V(v).reshape(batch_size, -1, self.num_heads, self.head_size).transpose(1, 2)
-
-        scores = attention(q, k, v, self.num_heads, mask, self.dropout)
-        concatenated = scores.transpose(1, 2).reshape(batch_size, -1, self.embed_size)
-        out = self.linear(concatenated)
-
-        return out
 
 
 class Transformer_Encoder(nn.Module):
@@ -112,16 +111,16 @@ class Transformer_Encoder(nn.Module):
 
 
 class Transformer_Decoder(nn.Module):
-    def __init__(self, embed_size, num_head, num_ff, dropout=0.1):
+    def __init__(self, embed_size, num_heads, num_ff, dropout=0.1):
         super(Transformer_Decoder, self).__init__()
 
         self.embed_size = embed_size
-        self.num_head = num_head
+        self.num_heads = num_heads
         self.num_ff = num_ff
         self.dropout = dropout
 
-        self.masked_multiheadattention = MultiHeadAttention(self.embed_size, self.num_head, self.dropout)
-        self.multiheadattention = MultiHeadAttention(self.embed_size, self.num_head, self.dropout)
+        self.masked_multiheadattention = MultiHeadAttention(self.embed_size, self.num_heads, self.dropout)
+        self.multiheadattention = MultiHeadAttention(self.embed_size, self.num_heads, self.dropout)
 
         self.Norm1 = nn.LayerNorm(self.embed_size)
         self.Norm2 = nn.LayerNorm(self.embed_size)
@@ -142,10 +141,10 @@ class Transformer_Decoder(nn.Module):
         return x
 
 
-class Transformer_Implemented(nn.Module):
+class Transformer(nn.Module):
     def __init__(self, s_vocab_size, t_vocab_size, embed_size, num_heads, num_ff, encode_layers, decode_layers,
                  hidden_size, dropout=0.2, device="cpu"):
-        super(Transformer_Implemented, self).__init__()
+        super(Transformer, self).__init__()
 
         self.s_vocab_size = s_vocab_size
         self.t_vocab_size = t_vocab_size
@@ -192,10 +191,10 @@ class Transformer_Implemented(nn.Module):
         return self.softmax(x)
 
 
-class Transformer(nn.Module):
+class Transformer_with_nn(nn.Module):
     def __init__(self, s_vocab_size, t_vocab_size, embed_size, num_head, num_ff, encode_layers, decode_layers,
                  dropout=0.2, device="cpu"):
-        super(Transformer, self).__init__()
+        super(Transformer_with_nn, self).__init__()
 
         self.s_vocab_size = s_vocab_size
         self.t_vocab_size = t_vocab_size
