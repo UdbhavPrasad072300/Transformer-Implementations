@@ -293,14 +293,16 @@ class ViT(nn.Module):
         self.classes = classes
         self.num_layers = num_layers
         self.hidden_size = hidden_size
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = dropout
+        self.dropout_layer = nn.Dropout(dropout)
 
         self.embeddings = nn.Linear(self.patch_size, self.embed_size)
         self.class_token = nn.Parameter(torch.randn(1, 1, self.embed_size))
+        self.positional_encoding = nn.Parameter(torch.randn(1, self.num_patches+1, self.embed_size))
 
         self.encoders = nn.ModuleList([])
         for layer in range(self.num_layers):
-            self.encoders.append(VisionEncoder(self.embed_size, self.num_heads, self.hidden_size, dropout))
+            self.encoders.append(VisionEncoder(self.embed_size, self.num_heads, self.hidden_size, self.dropout))
 
         self.norm = nn.LayerNorm(self.embed_size)
 
@@ -308,17 +310,18 @@ class ViT(nn.Module):
             nn.Linear(self.embed_size, self.classes)
         )
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         b, c, h, w = x.size()
 
         x = x.reshape(b, int((h / self.p) * (w / self.p)), c * self.p * self.p)
         x = self.embeddings(x)
 
         b, n, e = x.size()
+
         class_tokens = self.class_token.expand(b, 1, e)
-
         x = torch.cat((x, class_tokens), dim=1)
-
+        x = self.dropout_layer(x + self.positional_encoding[:, :(n+1)])
+        
         for encoder in self.encoders:
             x = encoder(x)
 
