@@ -18,5 +18,5 @@ from An Image is Worth 16x16 words: Transformers for image recognition at scale:
 Models trained with Implementation:
 <ul>
  <li><a href="https://github.com/UdbhavPrasad072300/Transformer-Implementations/blob/main/MNIST%20Classification%20-%20%20Vision%20Transformers.ipynb">MNIST - Grayscale Images</a></li>
-  <li><a href="">CIFAR10 - MultiChannel Images</a></li>
+  <li><a href="https://github.com/UdbhavPrasad072300/Transformer-Implementations/blob/main/CIFAR10%20Classification%20-%20%20Vision%20Transformers.ipynb">CIFAR10 - MultiChannel Images</a></li>
 </ul>
