@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
 
 import math
 
@@ -61,7 +62,7 @@ class PositionalEncoding(nn.Module):
 
         self.dropout = nn.Dropout(p=dropout)
 
-        self.pe_matrix = torch.zeros(max_seq_len, embedding_size).to(device)
+        self.pe_matrix = torch.rand(max_seq_len, embedding_size).to(device)
 
         position = torch.arange(0, max_seq_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, embedding_size, 2).float() * (-math.log(10000.0) / embedding_size))
@@ -74,7 +75,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer("Positional Encoding", self.pe_matrix)
 
     def forward(self, x):
-        x = x + self.pe_matrix[:x.size(0), :]
+        x = x + Variable(self.pe_matrix[:x.size(0), :], requires_grad=False)
         x = self.dropout(x)
         return x
 
@@ -160,6 +161,9 @@ class Transformer(nn.Module):
         self.encoder_positional_encoding = PositionalEncoding(self.s_vocab_size, self.embed_size, device=device)
         self.decoder_positional_encoding = PositionalEncoding(self.t_vocab_size, self.embed_size, device=device)
 
+        self.position_embedding1 = nn.Embedding(2000, embed_size)
+        self.position_embedding2 = nn.Embedding(2000, embed_size)
+        
         self.encoders = nn.ModuleList([])
         for layer in range(self.encoder_num_layers):
             self.encoders.append(Transformer_Encoder(self.embed_size, self.num_heads, self.hidden_size, dropout))
@@ -172,11 +176,20 @@ class Transformer(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x, y, mask=None):
-        x = self.encoder_embed(x) * math.sqrt(self.embed_size)
-        y = self.decoder_embed(y) * math.sqrt(self.embed_size)
-
-        x = self.encoder_positional_encoding(x)
-        y = self.decoder_positional_encoding(y)
+        Nx, seq_len_x = x.shape
+        Ny, seq_len_y = y.shape
+        
+        x = self.encoder_embed(x) #/ math.sqrt(self.embed_size)
+        y = self.decoder_embed(y) #/ math.sqrt(self.embed_size)
+        
+        xpositions = torch.arange(0, seq_len_x).expand(Nx, seq_len_x).to(self.device)
+        ypositions = torch.arange(0, seq_len_y).expand(Ny, seq_len_y).to(self.device)
+        
+        x = self.dropout(x + self.position_embedding1(xpositions))
+        y = self.dropout(x + self.position_embedding2(ypositions))
+        
+        #x = self.encoder_positional_encoding(x)
+        #y = self.decoder_positional_encoding(y)
 
         for encoder in self.encoders:
             x = encoder(x)
@@ -221,8 +234,8 @@ class Transformer_with_nn(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x, y):
-        x = self.encoder_embed(x) * math.sqrt(self.embed_size)
-        y = self.decoder_embed(y) * math.sqrt(self.embed_size)
+        x = self.encoder_embed(x) / math.sqrt(self.embed_size)
+        y = self.decoder_embed(y) / math.sqrt(self.embed_size)
 
         x = self.encoder_positional_encoding(x)
         y = self.decoder_positional_encoding(y)
