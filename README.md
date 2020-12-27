@@ -6,6 +6,17 @@ Transformer Implementations and some examples with them
 
 from Attention is All You Need: https://arxiv.org/pdf/1706.03762.pdf
 
+Models trained with Implementation:
+<ul>
+  <li><a href="https://github.com/UdbhavPrasad072300/Transformer-Implementations/blob/main/Language%20Translation.ipynb">Multi30k - German to English</a></li>
+</ul>
+
 ## Mutli-class Image Classification with Vision Transformers
 
 from An Image is Worth 16x16 words: Transformers for image recognition at scale: https://arxiv.org/pdf/2010.11929v1.pdf
+
+Models trained with Implementation:
+<ul>
+ <li><a href="https://github.com/UdbhavPrasad072300/Transformer-Implementations/blob/main/MNIST%20Classification%20-%20%20Vision%20Transformers.ipynb">MNIST - Grayscale Images</a></li>
+  <li><a href="">CIFAR10 - MultiChannel Images</a></li>
+</ul>
