@@ -264,9 +264,9 @@ class VisionEncoder(nn.Module):
 
         self.attention = MultiHeadAttention(self.embed_size, self.num_heads, dropout=dropout)
 
-        self.ff = nn.Sequential(
+        self.mlp = nn.Sequential(
             nn.Linear(self.embed_size, self.hidden_size),
-            nn.LeakyReLU(),
+            nn.GELU(),
             nn.Dropout(self.dropout),
             nn.Linear(self.hidden_size, self.embed_size),
             nn.Dropout(self.dropout)
@@ -275,7 +275,7 @@ class VisionEncoder(nn.Module):
     def forward(self, x):
         x = self.norm1(x)
         x = x + self.attention(x, x, x)
-        x = x + self.ff(self.norm2(x))
+        x = x + self.mlp(self.norm2(x))
         return x
 
 
