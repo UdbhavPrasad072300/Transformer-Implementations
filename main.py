@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
 
     def test(size):
-        x, y = torch.rand(64, 50).type(torch.LongTensor).to(device), torch.rand(64, size).type(torch.LongTensor).to(
+        x, y = torch.rand(50, 64).type(torch.LongTensor).to(device), torch.rand(size, 64).type(torch.LongTensor).to(
             device)
 
         print("Input Dimensions: {} & {}".format(x.size(), y.size()))

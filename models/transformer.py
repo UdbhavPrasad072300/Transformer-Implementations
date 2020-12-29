@@ -8,15 +8,16 @@ import math
 
 def attention(q, k, v, d_k, mask=None, dropout=0.2):
     dropout_layer = nn.Dropout(dropout)
-    scores = torch.einsum("bqhe,bkhe->bhqk", [q, k]) / math.sqrt(d_k)
+    
+    scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
 
     if mask is not None:
-        mask = mask.unsqueeze(1)
-        scores = scores.masked_fill(mask == 0, -1e9)
+        mask = mask.unsqueeze(0)
+        scores = scores.masked_fill(mask == 0, float("-inf"))
 
     scores = F.softmax(scores, dim=-1)
     scores = dropout_layer(scores)
-    out = torch.einsum("bhql,blhd->bqhd", [scores, v])
+    out = torch.matmul(scores, v)
 
     return out
 
@@ -41,43 +42,40 @@ class MultiHeadAttention(nn.Module):
         self.linear = nn.Linear(self.embed_size, self.embed_size)
 
     def forward(self, q, k, v, mask=None):
-        q_batch_size, q_seq_len, q_embed_size = q.size()
-        k_batch_size, k_seq_len, k_embed_size = k.size()
-        v_batch_size, v_seq_len, v_embed_size = v.size()
+        q_seq_len, q_batch_size, q_embed_size = q.size()
+        k_seq_len, k_batch_size, k_embed_size = k.size()
+        v_seq_len, v_batch_size, v_embed_size = v.size()
 
-        q = self.Q(q).reshape(q_batch_size, q_seq_len, self.num_heads, self.head_size)
-        k = self.K(k).reshape(k_batch_size, k_seq_len, self.num_heads, self.head_size)
-        v = self.V(v).reshape(v_batch_size, v_seq_len, self.num_heads, self.head_size)
+        q = self.Q(q).reshape(q_batch_size, self.num_heads, q_seq_len, self.head_size)
+        k = self.K(k).reshape(k_batch_size, self.num_heads, k_seq_len, self.head_size)
+        v = self.V(v).reshape(v_batch_size, self.num_heads, v_seq_len, self.head_size)
+        
         scores = attention(q, k, v, self.num_heads, mask, self.dropout)
-        concatenated = scores.reshape(v_batch_size, -1, self.embed_size)
+        
+        concatenated = scores.reshape(-1, v_batch_size, self.embed_size)
+        
         out = self.linear(concatenated)
 
         return out
-
-
+    
+    
+# https://pytorch.org/tutorials/beginner/transformer_tutorial.html
 class PositionalEncoding(nn.Module):
-    def __init__(self, max_seq_len=2000, embedding_size=300, dropout=0.2, device="cpu"):
+    def __init__(self, max_len=5000, d_model=300, dropout=0.1, device="cpu"):
         super(PositionalEncoding, self).__init__()
-        import math
-
         self.dropout = nn.Dropout(p=dropout)
 
-        self.pe_matrix = torch.rand(max_seq_len, embedding_size).to(device)
-
-        position = torch.arange(0, max_seq_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, embedding_size, 2).float() * (-math.log(10000.0) / embedding_size))
-        self.pe_matrix[:, 0::2] = torch.sin(
-            position * div_term)  # Source: https://pytorch.org/tutorials/beginner/transformer_tutorial
-        self.pe_matrix[:, 1::2] = torch.cos(position * div_term)
-
-        self.pe_matrix = self.pe_matrix.unsqueeze(0).transpose(0, 1)
-
-        self.register_buffer("Positional Encoding", self.pe_matrix)
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
 
     def forward(self, x):
-        x = x + Variable(self.pe_matrix[:x.size(0), :], requires_grad=False)
-        x = self.dropout(x)
-        return x
+        x = x + Variable(self.pe[:x.size(0), :], requires_grad=False)
+        return self.dropout(x)
 
 
 class Transformer_Encoder(nn.Module):
@@ -110,13 +108,14 @@ class Transformer_Encoder(nn.Module):
 
 
 class Transformer_Decoder(nn.Module):
-    def __init__(self, embed_size, num_heads, num_ff, dropout=0.1):
+    def __init__(self, embed_size, num_heads, num_ff, dropout=0.1, device="cpu"):
         super(Transformer_Decoder, self).__init__()
 
         self.embed_size = embed_size
         self.num_heads = num_heads
         self.num_ff = num_ff
         self.dropout = dropout
+        self.device = device
 
         self.masked_multiheadattention = MultiHeadAttention(self.embed_size, self.num_heads, self.dropout)
         self.multiheadattention = MultiHeadAttention(self.embed_size, self.num_heads, self.dropout)
@@ -134,9 +133,14 @@ class Transformer_Decoder(nn.Module):
         )
 
     def forward(self, x, y, mask=None):
-        y = self.dropout_layer(self.Norm1(y + self.masked_multiheadattention(y, y, y, mask)))
+        y_mask = torch.tril(torch.ones((y.size(0), y.size(0)))).expand(y.size(1), 1, y.size(0), y.size(0)).to(self.device)
+
+        y = self.dropout_layer(self.Norm1(y + self.masked_multiheadattention(y, y, y, y_mask)))
+
         x = self.dropout_layer(self.Norm2(y + self.multiheadattention(y, x, x, mask)))
+
         x = self.dropout_layer(self.Norm3(x + self.feed_forward(x)))
+
         return x
 
 
@@ -169,20 +173,15 @@ class Transformer(nn.Module):
 
         self.decoders = nn.ModuleList([])
         for layer in range(self.decoder_num_layers):
-            self.decoders.append(Transformer_Decoder(self.embed_size, self.num_heads, self.hidden_size, dropout))
+            self.decoders.append(Transformer_Decoder(self.embed_size, self.num_heads, self.hidden_size, dropout,
+                                                     self.device))
 
         self.final = nn.Linear(self.embed_size, self.t_vocab_size)
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x, y, mask=None):
-        Nx, seq_len_x = x.shape
-        Ny, seq_len_y = y.shape
-        
-        x = self.encoder_embed(x) / math.sqrt(self.embed_size)
-        y = self.decoder_embed(y) / math.sqrt(self.embed_size)
-        
-        xpositions = torch.arange(0, seq_len_x).expand(Nx, seq_len_x).to(self.device)
-        ypositions = torch.arange(0, seq_len_y).expand(Ny, seq_len_y).to(self.device)
+        x = self.encoder_embed(x) * math.sqrt(self.embed_size)
+        y = self.decoder_embed(y) * math.sqrt(self.embed_size)
         
         x = self.encoder_positional_encoding(x)
         y = self.decoder_positional_encoding(y)
@@ -226,6 +225,8 @@ class Transformer_with_nn(nn.Module):
                                                         dropout=self.dropout)
         self.decoder = nn.TransformerDecoder(self.decoder_layer, self.decoder_num_layers)
 
+        self.transformer = nn.Transformer(self.embed_size, self.num_head, self.encoder_num_layers, self.decoder_num_layers, self.num_ff, self.dropout)
+        
         self.final = nn.Linear(self.embed_size, self.t_vocab_size)
         self.softmax = nn.Softmax(dim=-1)
 
@@ -236,12 +237,14 @@ class Transformer_with_nn(nn.Module):
         x = self.encoder_positional_encoding(x)
         y = self.decoder_positional_encoding(y)
 
-        memory = self.encoder(x)
+        x = self.softmax(self.transformer(x, y))
+        
+        #memory = self.encoder(x)
+        
+        #out = self.decoder(y, memory)
 
-        out = self.decoder(y, memory)
-
-        x = self.final(out)
-        x = self.softmax(x)
+        #x = self.final(out)
+        #x = self.softmax(x)
 
         return x
 
