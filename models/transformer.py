@@ -155,14 +155,13 @@ class Transformer(nn.Module):
         self.hidden_size = hidden_size
         self.dropout = dropout
         self.device = device
+        
+        self.dropout_layer = nn.Dropout(self.dropout)
 
         self.encoder_embed = nn.Embedding(self.s_vocab_size, embed_size)
         self.decoder_embed = nn.Embedding(self.t_vocab_size, embed_size)
         self.encoder_positional_encoding = PositionalEncoding(self.s_vocab_size, self.embed_size, device=device)
         self.decoder_positional_encoding = PositionalEncoding(self.t_vocab_size, self.embed_size, device=device)
-
-        self.position_embedding1 = nn.Embedding(2000, embed_size)
-        self.position_embedding2 = nn.Embedding(2000, embed_size)
         
         self.encoders = nn.ModuleList([])
         for layer in range(self.encoder_num_layers):
@@ -179,27 +178,24 @@ class Transformer(nn.Module):
         Nx, seq_len_x = x.shape
         Ny, seq_len_y = y.shape
         
-        x = self.encoder_embed(x) #/ math.sqrt(self.embed_size)
-        y = self.decoder_embed(y) #/ math.sqrt(self.embed_size)
+        x = self.encoder_embed(x) / math.sqrt(self.embed_size)
+        y = self.decoder_embed(y) / math.sqrt(self.embed_size)
         
         xpositions = torch.arange(0, seq_len_x).expand(Nx, seq_len_x).to(self.device)
         ypositions = torch.arange(0, seq_len_y).expand(Ny, seq_len_y).to(self.device)
         
-        x = self.dropout(x + self.position_embedding1(xpositions))
-        y = self.dropout(x + self.position_embedding2(ypositions))
-        
-        #x = self.encoder_positional_encoding(x)
-        #y = self.decoder_positional_encoding(y)
+        x = self.encoder_positional_encoding(x)
+        y = self.decoder_positional_encoding(y)
 
         for encoder in self.encoders:
             x = encoder(x)
 
         for decoder in self.decoders:
-            x = decoder(x, y)
+            y = decoder(x, y)
 
-        x = self.final(x)
+        y = self.final(y)
 
-        return self.softmax(x)
+        return self.softmax(y)
 
 
 class Transformer_with_nn(nn.Module):
