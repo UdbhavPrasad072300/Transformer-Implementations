@@ -3,6 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+import torchvision
+import torchvision.models as models
+
 import math
 
 
@@ -18,7 +21,7 @@ class MultiHeadAttention(nn.Module):
         self.num_heads = num_heads
         self.dropout = dropout
         self.batch_dim = batch_dim
-        
+
         self.dropout_layer = nn.Dropout(dropout)
 
         self.head_size = self.embed_size // self.num_heads
@@ -36,25 +39,25 @@ class MultiHeadAttention(nn.Module):
             out = self.batch_0(q, k, v, mask)
         elif self.batch_dim == 1:
             out = self.batch_1(q, k, v, mask)
-    
+
         return out
-    
+
     def batch_0(self, q, k, v, mask=None):
         q_batch_size, q_seq_len, q_embed_size = q.size()
         k_batch_size, k_seq_len, k_embed_size = k.size()
         v_batch_size, v_seq_len, v_embed_size = v.size()
-        
+
         q = self.Q(q).reshape(q_batch_size, q_seq_len, self.num_heads, self.head_size)
         k = self.K(k).reshape(k_batch_size, k_seq_len, self.num_heads, self.head_size)
         v = self.V(v).reshape(v_batch_size, v_seq_len, self.num_heads, self.head_size)
-        
+
         scores = self.attention(q, k, v, self.num_heads, mask)
         concatenated = scores.reshape(v_batch_size, -1, self.embed_size)
-        
+
         out = self.linear(concatenated)
 
         return out
-    
+
     def batch_1(self, q, k, v, mask=None):
         q_seq_len, q_batch_size, q_embed_size = q.size()
         k_seq_len, k_batch_size, k_embed_size = k.size()
@@ -63,18 +66,18 @@ class MultiHeadAttention(nn.Module):
         q = self.Q(q).reshape(q_batch_size, q_seq_len, self.num_heads, self.head_size)
         k = self.K(k).reshape(k_batch_size, k_seq_len, self.num_heads, self.head_size)
         v = self.V(v).reshape(v_batch_size, v_seq_len, self.num_heads, self.head_size)
-        
+
         scores = self.attention(q, k, v, self.num_heads, mask)
         concatenated = scores.reshape(-1, v_batch_size, self.embed_size)
-        
+
         out = self.linear(concatenated)
 
         return out
-    
+
     def attention(self, q, k, v, d_k, mask=None):
         scores = torch.einsum("bqhe,bkhe->bhqk", [q, k]) / math.sqrt(d_k)
 
-        #if mask is not None:
+        # if mask is not None:
         #    scores = scores.masked_fill(mask == 0, -1e9)
 
         scores = F.softmax(scores, dim=-1)
@@ -82,8 +85,8 @@ class MultiHeadAttention(nn.Module):
         out = torch.einsum("bhql,blhd->bqhd", [scores, v])
 
         return out
-    
-    
+
+
 # https://pytorch.org/tutorials/beginner/transformer_tutorial.html
 class PositionalEncoding(nn.Module):
     def __init__(self, max_len=5000, d_model=300, dropout=0.1, device="cpu"):
@@ -162,11 +165,11 @@ class Transformer_Decoder(nn.Module):
         y_mask = torch.tril(torch.ones((y.size(0), y.size(0)))).to(self.device)
 
         attention1, _ = self.masked_multiheadattention(y, y, y)
-        
+
         y = self.dropout_layer(self.Norm1(y + attention1))
 
         attention2, _ = self.multiheadattention(y, x, x)
-        
+
         x = self.dropout_layer(self.Norm2(y + attention2))
 
         x = self.dropout_layer(self.Norm3(x + self.feed_forward(x)))
@@ -189,14 +192,14 @@ class Transformer(nn.Module):
         self.hidden_size = hidden_size
         self.dropout = dropout
         self.device = device
-        
+
         self.dropout_layer = nn.Dropout(self.dropout)
 
         self.encoder_embed = nn.Embedding(self.s_vocab_size, embed_size)
         self.decoder_embed = nn.Embedding(self.t_vocab_size, embed_size)
         self.encoder_positional_encoding = PositionalEncoding(self.s_vocab_size, self.embed_size, device=device)
         self.decoder_positional_encoding = PositionalEncoding(self.t_vocab_size, self.embed_size, device=device)
-        
+
         self.encoders = nn.ModuleList([])
         for layer in range(self.encoder_num_layers):
             self.encoders.append(Transformer_Encoder(self.embed_size, self.num_heads, self.hidden_size, dropout))
@@ -212,7 +215,7 @@ class Transformer(nn.Module):
     def forward(self, x, y, mask=None):
         x = self.encoder_embed(x) * math.sqrt(self.embed_size)
         y = self.decoder_embed(y) * math.sqrt(self.embed_size)
-        
+
         x = self.encoder_positional_encoding(x)
         y = self.decoder_positional_encoding(y)
 
@@ -255,8 +258,9 @@ class Transformer_with_nn(nn.Module):
                                                         dropout=self.dropout)
         self.decoder = nn.TransformerDecoder(self.decoder_layer, self.decoder_num_layers)
 
-        self.transformer = nn.Transformer(self.embed_size, self.num_head, self.encoder_num_layers, self.decoder_num_layers, self.num_ff, self.dropout)
-        
+        self.transformer = nn.Transformer(self.embed_size, self.num_head, self.encoder_num_layers,
+                                          self.decoder_num_layers, self.num_ff, self.dropout)
+
         self.final = nn.Linear(self.embed_size, self.t_vocab_size)
         self.softmax = nn.Softmax(dim=-1)
 
@@ -268,13 +272,13 @@ class Transformer_with_nn(nn.Module):
         y = self.decoder_positional_encoding(y)
 
         x = self.softmax(self.transformer(x, y))
-        
-        #memory = self.encoder(x)
-        
-        #out = self.decoder(y, memory)
 
-        #x = self.final(out)
-        #x = self.softmax(x)
+        # memory = self.encoder(x)
+
+        # out = self.decoder(y, memory)
+
+        # x = self.final(out)
+        # x = self.softmax(x)
 
         return x
 
@@ -294,10 +298,10 @@ class VisionEncoder(nn.Module):
         self.attention = MultiHeadAttention(self.embed_size, self.num_heads, dropout=dropout)
 
         self.mlp = nn.Sequential(
-            nn.Linear(self.embed_size, self.hidden_size),
+            nn.Linear(self.embed_size, 4*self.embed_size),
             nn.GELU(),
             nn.Dropout(self.dropout),
-            nn.Linear(self.hidden_size, self.embed_size),
+            nn.Linear(4*self.embed_size, self.embed_size),
             nn.Dropout(self.dropout)
         )
 
@@ -327,7 +331,7 @@ class ViT(nn.Module):
 
         self.embeddings = nn.Linear(self.patch_size, self.embed_size)
         self.class_token = nn.Parameter(torch.randn(1, 1, self.embed_size))
-        self.positional_encoding = nn.Parameter(torch.randn(1, self.num_patches+1, self.embed_size))
+        self.positional_encoding = nn.Parameter(torch.randn(1, self.num_patches + 1, self.embed_size))
 
         self.encoders = nn.ModuleList([])
         for layer in range(self.num_layers):
@@ -347,15 +351,139 @@ class ViT(nn.Module):
 
         b, n, e = x.size()
 
-        class_tokens = self.class_token.expand(b, 1, e)
-        x = torch.cat((x, class_tokens), dim=1)
-        x = self.dropout_layer(x + self.positional_encoding[:, :(n+1)])
-        
+        class_token = self.class_token.expand(b, 1, e)
+        x = torch.cat((x, class_token), dim=1)
+        x = self.dropout_layer(x + self.positional_encoding[:, :(n + 1)])
+
         for encoder in self.encoders:
             x = encoder(x)
 
         x = x[:, 0, :]
 
         x = F.log_softmax(self.classifier(self.norm(x)), dim=-1)
+
+        return x
+
+
+class VGG19_classifier(nn.Module):
+    def __init__(self, classes, hidden_size, dropout=0.1):
+        super(VGG19_classifier, self).__init__()
+
+        self.classes = classes
+        self.hidden_size = hidden_size
+        self.dropout = dropout
+
+        self.vgg19 = models.vgg19(pretrained=True)
+
+        for parameter in self.vgg19.parameters():
+            parameter.requires_grad = False
+
+        self.preprocess = torchvision.transforms.Compose([
+            torchvision.transforms.Resize(size=(224, 224)),
+            torchvision.transforms.ToTensor()
+        ])
+
+        self.classifier = nn.Sequential(
+            nn.Linear(self.input_size, self.hidden_size),
+            nn.LeakyReLU(),
+            nn.Dropout(self.dropout),
+            nn.Linear(self.hidden_size, self.classes),
+            F.log_softmax(dim=-1)
+        )
+
+    def forward(self, x):
+        x = self.preprocess(x)
+        x = self.vgg19(x)
+        x = self.classifier(x)
+        print(x)
+        return x
+
+
+class DeiT(nn.Module):
+    def __init__(self, image_size, channel_size, patch_size, embed_size, num_heads, classes, num_layers,
+                 teacher_hidden_size, hidden_size, dropout=0.1):
+        super(DeiT, self).__init__()
+
+        self.image_size = image_size
+        self.channel_size = channel_size
+        self.patch_size = patch_size
+        self.embed_size = embed_size
+        self.num_heads - num_heads
+        self.classes = classes
+        self.num_layers = num_layers
+        self.teacher_hidden_size = teacher_hidden_size
+        self.hidden_size = hidden_size
+        self.dropout = dropout
+
+        self.dropout_layer = nn.Dropout(self.dropout)
+
+        self.norm = nn.LayerNorm(self.embed_size)
+
+        self.embeddings = nn.Linear(self.patch_size, self.embed_size)
+        self.class_token = nn.Parameter(torch.randn(1, 1, self.embed_size))
+        self.distillation_token = nn.Parameter(torch.randn(1, 1, self.embed_size))
+        self.positional_encoding = nn.Parameter(torch.randn(1, self.num_patches + 1, self.embed_size))
+
+        self.teacher_model = VGG19_classifier(self.classes, self.hidden_size, self.dropout)
+
+        self.encoders = nn.ModuleList([])
+        for layer in range(self.num_layers):
+            self.encoders.append(VisionEncoder(self.embed_size, self.num_heads, self.hidden_size, self.dropout))
+
+        self.classifier = nn.Sequential(
+            nn.Linear(self.embed_size, self.classes)
+        )
+
+    def forward(self, x, mask=None):
+        b, c, h, w = x.size()
+
+        teacher_logit_vector = self.teacher_model(x)
+
+        x = x.reshape(b, int((h / self.p) * (w / self.p)), c * self.p * self.p)
+        x = self.embeddings(x)
+
+        b, n, e = x.size()
+
+        class_token = self.class_token.expand(b, 1, e)
+        x = torch.cat((x, class_token), dim=1)
+
+        distillation_token = self.class_token.expand(b, 1, e)
+        x = torch.cat((x, distillation_token), dim=1)
+
+        x = self.dropout_layer(x + self.positional_encoding[:, :(n + 1)])
+
+        for encoder in self.encoders:
+            x = encoder(x)
+
+        x = x[:, 0, :]
+
+        x = F.log_softmax(self.classifier(self.norm(x)), dim=-1)
+
+        return x, teacher_logit_vector
+
+
+class BERT(nn.Module):
+    def __init__(self, embed_size, num_layers, num_heads, hidden_size, dropout=0.2, device="cpu"):
+        super(BERT, self).__init__()
+
+        self.embed_size = embed_size
+        self.num_layers = num_layers
+        self.num_heads = num_heads
+        self.hidden_size = hidden_size
+        self.dropout = dropout
+
+        self.encoder_embed = nn.Embedding(self.s_vocab_size, embed_size)
+        self.encoder_positional_encoding = PositionalEncoding(self.s_vocab_size, self.embed_size, device=device)
+
+        self.encoders = nn.ModuleList([])
+        for layer in range(self.num_layers):
+            self.encoders.append(Transformer_Encoder(self.embed_size, self.num_heads, self.hidden_size, self.dropout))
+
+    def forward(self, x):
+        x = self.encoder_embed(x) * math.sqrt(self.embed_size)
+        x = self.encoder_positional_encoding(x)
+
+        for encoder in self.encoders:
+            x = encoder(x)
 
         return x
