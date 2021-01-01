@@ -437,7 +437,7 @@ class DeiT(nn.Module):
     def forward(self, x, mask=None):
         b, c, h, w = x.size()
 
-        teacher_logit_vector = self.teacher_model(x)
+        teacher_logits_vector = self.teacher_model(x)
 
         x = x.reshape(b, int((h / self.p) * (w / self.p)), c * self.p * self.p)
         x = self.embeddings(x)
@@ -459,7 +459,7 @@ class DeiT(nn.Module):
 
         x = F.log_softmax(self.classifier(self.norm(x)), dim=-1)
 
-        return x, teacher_logit_vector
+        return x, teacher_logits_vector
 
 
 class BERT(nn.Module):

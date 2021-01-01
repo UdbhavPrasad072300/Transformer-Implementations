@@ -2,7 +2,22 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.transformer import Transformer, Transformer
+from models.transformer import Transformer, ViT
+
+torch.manual_seed(0)
+
+
+def test(size):
+    x, y = torch.rand(50, 64).type(torch.LongTensor).to(device), torch.rand(size, 64).type(torch.LongTensor).to(
+        device)
+
+    print("Input Dimensions: {} & {}".format(x.size(), y.size()))
+
+    out = model(x, y)
+
+    print("Output Dimensions: {}".format(out.size()))
+    print("-" * 100)
+
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -25,19 +40,6 @@ if __name__ == "__main__":
     print("-" * 100)
     print(model)
     print("-" * 100)
-
-
-    def test(size):
-        x, y = torch.rand(50, 64).type(torch.LongTensor).to(device), torch.rand(size, 64).type(torch.LongTensor).to(
-            device)
-
-        print("Input Dimensions: {} & {}".format(x.size(), y.size()))
-
-        out = model(x, y)
-
-        print("Output Dimensions: {}".format(out.size()))
-        print("-"*100)
-
 
     test(40)
     test(50)
