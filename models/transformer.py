@@ -9,10 +9,6 @@ import torchvision.models as models
 import math
 
 
-# Multiheaded Attention for when Input Tensor: (B, S, E)
-# B: Batch Size
-# S: Sequence Length
-# E: Embedding Size
 class MultiHeadAttention(nn.Module):
     def __init__(self, embed_size, num_heads, dropout=0.2, batch_dim=0):
         super(MultiHeadAttention, self).__init__()
