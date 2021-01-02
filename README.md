@@ -2,6 +2,14 @@
 
 Transformer Implementations and some examples with them
 
+## Installation
+
+<a href="https://pypi.org/project/transformer-implementations/">PyPi Installation</a>
+
+```bash
+$ pip install transformer-implementations
+```
+
 ## Language Translation
 
 from "Attention is All You Need": https://arxiv.org/pdf/1706.03762.pdf

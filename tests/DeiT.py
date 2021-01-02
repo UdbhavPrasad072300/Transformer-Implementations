@@ -1,7 +1,7 @@
 from models.transformer import DeiT
 
 import torch
-import torch.nn
+import torch.nn as nn
 
 torch.manual_seed(0)
 
