@@ -361,43 +361,45 @@ class ViT(nn.Module):
         return x
 
 
-class VGG19_classifier(nn.Module):
-    def __init__(self, classes, hidden_size, dropout=0.1):
-        super(VGG19_classifier, self).__init__()
+class VGG16_classifier(nn.Module):
+    def __init__(self, classes, hidden_size, preprocess_flag=False, dropout=0.1):
+        super(VGG16_classifier, self).__init__()
 
         self.classes = classes
         self.hidden_size = hidden_size
+        self.preprocess_flag = preprocess_flag
         self.dropout = dropout
 
-        self.vgg19 = models.vgg19(pretrained=True)
+        self.vgg16 = models.vgg16(pretrained=True)
 
-        for parameter in self.vgg19.parameters():
+        for parameter in self.vgg16.parameters():
             parameter.requires_grad = False
 
         self.preprocess = torchvision.transforms.Compose([
             torchvision.transforms.Resize(size=(224, 224)),
             torchvision.transforms.ToTensor()
         ])
-
-        self.classifier = nn.Sequential(
-            nn.Linear(self.input_size, self.hidden_size),
-            nn.LeakyReLU(),
+        
+        self.vgg16.classifier = nn.Sequential(
+            nn.Linear(25088, self.hidden_size*2),
+            nn.ReLU(),
             nn.Dropout(self.dropout),
-            nn.Linear(self.hidden_size, self.classes),
-            F.log_softmax(dim=-1)
+            nn.Linear(self.hidden_size*2, self.hidden_size),
+            nn.ReLU(),
+            nn.Dropout(self.dropout),
+            nn.Linear(self.hidden_size, self.classes)
         )
 
     def forward(self, x):
-        x = self.preprocess(x)
-        x = self.vgg19(x)
-        x = self.classifier(x)
-        print(x)
+        if self.preprocess_flag:
+            x = self.preprocess(x)
+        x = self.vgg16(x)
         return x
 
 
 class DeiT(nn.Module):
     def __init__(self, image_size, channel_size, patch_size, embed_size, num_heads, classes, num_layers,
-                 teacher_hidden_size, hidden_size, dropout=0.1):
+                 teacher_hidden_size, hidden_size, teacher_model=None, dropout=0.1):
         super(DeiT, self).__init__()
 
         self.image_size = image_size
@@ -420,7 +422,10 @@ class DeiT(nn.Module):
         self.distillation_token = nn.Parameter(torch.randn(1, 1, self.embed_size))
         self.positional_encoding = nn.Parameter(torch.randn(1, self.num_patches + 1, self.embed_size))
 
-        self.teacher_model = VGG19_classifier(self.classes, self.hidden_size, self.dropout)
+        if teacher_model == None:
+            self.teacher_model = VGG19_classifier(self.classes, self.hidden_size, self.dropout)
+        else:
+            self.teacher_model = teacher_model
         self.teacher_model.eval()
 
         self.encoders = nn.ModuleList([])
@@ -454,7 +459,7 @@ class DeiT(nn.Module):
 
         x = x[:, 0, :]
 
-        x = F.log_softmax(self.classifier(self.norm(x)), dim=-1)
+        x = self.classifier(self.norm(x))
 
         return x, teacher_logits_vector
 

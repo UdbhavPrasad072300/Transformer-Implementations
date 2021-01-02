@@ -135,3 +135,4 @@ data/
 
 .trained_models/
 *.pt
+*.pth
