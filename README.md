@@ -35,6 +35,6 @@ from "Training data-efficient image transformers & distillation through attentio
 
 Models trained with Implementation:
 <ul>
- <li><a href="https://github.com/UdbhavPrasad072300/Transformer-Implementations/blob/main/pre-train/VGG19_CIFAR10.ipynb">Pretraining Teacher model for Distillation</a></li>
+ <li><a href="https://github.com/UdbhavPrasad072300/Transformer-Implementations/blob/main/pre-train/VGG16_CIFAR10.ipynb">Pretraining Teacher model for Distillation</a></li>
  <li><a href="https://github.com/UdbhavPrasad072300/Transformer-Implementations/blob/main/notebooks/CIFAR10%20Classification%20-%20DeiT.ipynb">MNIST - Grayscale Images</a></li>
 </ul>
