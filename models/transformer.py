@@ -421,6 +421,7 @@ class DeiT(nn.Module):
         self.positional_encoding = nn.Parameter(torch.randn(1, self.num_patches + 1, self.embed_size))
 
         self.teacher_model = VGG19_classifier(self.classes, self.hidden_size, self.dropout)
+        self.teacher_model.eval()
 
         self.encoders = nn.ModuleList([])
         for layer in range(self.num_layers):
