@@ -317,7 +317,7 @@ class ViT(nn.Module):
         self.image_size = image_size
         self.embed_size = embed_size
         self.num_patches = (image_size // patch_size) ** 2
-        self.patch_size = channel_size * patch_size ** 2
+        self.patch_size = channel_size * (patch_size ** 2)
         self.num_heads = num_heads
         self.classes = classes
         self.num_layers = num_layers
@@ -349,7 +349,7 @@ class ViT(nn.Module):
 
         class_token = self.class_token.expand(b, 1, e)
         x = torch.cat((x, class_token), dim=1)
-        x = self.dropout_layer(x + self.positional_encoding[:, :(n + 1)])
+        x = self.dropout_layer(x + self.positional_encoding)
 
         for encoder in self.encoders:
             x = encoder(x)
@@ -362,21 +362,22 @@ class ViT(nn.Module):
 
 
 class VGG16_classifier(nn.Module):
-    def __init__(self, classes, hidden_size, preprocess_flag=False, dropout=0.1):
+    def __init__(self, classes, hidden_size, img_size_preprocess=224, preprocess_flag=False, dropout=0.1):
         super(VGG16_classifier, self).__init__()
 
         self.classes = classes
         self.hidden_size = hidden_size
+        self.img_size_preprocess = img_size_preprocess
         self.preprocess_flag = preprocess_flag
         self.dropout = dropout
-
+        
         self.vgg16 = models.vgg16(pretrained=True)
 
         for parameter in self.vgg16.parameters():
             parameter.requires_grad = False
 
         self.preprocess = torchvision.transforms.Compose([
-            torchvision.transforms.Resize(size=(224, 224)),
+            torchvision.transforms.Resize(size=(self.img_size_preprocess, self.img_size_preprocess)),
             torchvision.transforms.ToTensor()
         ])
         
@@ -399,17 +400,18 @@ class VGG16_classifier(nn.Module):
 
 class DeiT(nn.Module):
     def __init__(self, image_size, channel_size, patch_size, embed_size, num_heads, classes, num_layers,
-                 teacher_hidden_size, hidden_size, teacher_model=None, dropout=0.1):
+                 hidden_size, teacher_model, dropout=0.1):
         super(DeiT, self).__init__()
 
         self.image_size = image_size
         self.channel_size = channel_size
-        self.patch_size = patch_size
+        self.p = patch_size
+        self.num_patches = (image_size // patch_size) ** 2
+        self.patch_size = channel_size * (patch_size ** 2)
         self.embed_size = embed_size
-        self.num_heads - num_heads
+        self.num_heads = num_heads
         self.classes = classes
         self.num_layers = num_layers
-        self.teacher_hidden_size = teacher_hidden_size
         self.hidden_size = hidden_size
         self.dropout = dropout
 
@@ -420,12 +422,11 @@ class DeiT(nn.Module):
         self.embeddings = nn.Linear(self.patch_size, self.embed_size)
         self.class_token = nn.Parameter(torch.randn(1, 1, self.embed_size))
         self.distillation_token = nn.Parameter(torch.randn(1, 1, self.embed_size))
-        self.positional_encoding = nn.Parameter(torch.randn(1, self.num_patches + 1, self.embed_size))
-
-        if teacher_model == None:
-            self.teacher_model = VGG19_classifier(self.classes, self.hidden_size, self.dropout)
-        else:
-            self.teacher_model = teacher_model
+        self.positional_encoding = nn.Parameter(torch.randn(1, self.num_patches + 2, self.embed_size))
+        
+        self.teacher_model = teacher_model
+        for parameter in self.teacher_model.parameters():
+            parameter.requires_grad = False
         self.teacher_model.eval()
 
         self.encoders = nn.ModuleList([])
@@ -451,8 +452,8 @@ class DeiT(nn.Module):
 
         distillation_token = self.class_token.expand(b, 1, e)
         x = torch.cat((x, distillation_token), dim=1)
-
-        x = self.dropout_layer(x + self.positional_encoding[:, :(n + 1)])
+        
+        x = self.dropout_layer(x + self.positional_encoding)
 
         for encoder in self.encoders:
             x = encoder(x)

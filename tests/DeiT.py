@@ -28,12 +28,11 @@ def test_out_size(img_size=28, patch_size=7, channel_size=3, n_classes=10, batch
 
     y = model(x)
 
-    print("Dimenstions of Input Vector: ", x.size())
-    print("Dimenstions of Output Target Vector: ", y.size())
-
     assert list(y.size()) == [batch_size, n_classes], "Output Size Incorrect"
 
     del model
+    del x
+    del y
     torch.cuda.empty_cache()
 
 

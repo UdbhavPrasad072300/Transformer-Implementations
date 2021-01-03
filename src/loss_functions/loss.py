@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class Soft_Distillation(nn.Module):
+class Soft_Distillation_Loss(nn.Module):
     def __init__(self, lambda_balancing):
-        super(Soft_Distillation, self).__init__()
+        super(Soft_Distillation_Loss, self).__init__()
 
         self.lambda_balancing = lambda_balancing
 
@@ -21,9 +21,9 @@ class Soft_Distillation(nn.Module):
         return loss
 
 
-class Hard_Distillation(nn.Module):
+class Hard_Distillation_Loss(nn.Module):
     def __init__(self):
-        super(Hard_Distillation, self).__init__()
+        super(Hard_Distillation_Loss, self).__init__()
 
         self.CE_teacher = nn.CrossEntropyLoss()
         self.CE_student = nn.CrossEntropyLoss()
