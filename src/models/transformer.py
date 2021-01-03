@@ -206,7 +206,7 @@ class Transformer(nn.Module):
                                                      self.device))
 
         self.final = nn.Linear(self.embed_size, self.t_vocab_size)
-        self.softmax = nn.Softmax(dim=-1)
+        self.softmax = nn.LogSoftmax(dim=-1)
 
     def forward(self, x, y, mask=None):
         x = self.encoder_embed(x) * math.sqrt(self.embed_size)
