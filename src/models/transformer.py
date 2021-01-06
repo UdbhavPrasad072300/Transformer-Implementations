@@ -374,7 +374,7 @@ class VGG16_classifier(nn.Module):
         self.vgg16 = models.vgg16(pretrained=True)
 
         for parameter in self.vgg16.parameters():
-            parameter.requires_grad = False
+            parameter.requires_grad = True
 
         self.preprocess = torchvision.transforms.Compose([
             torchvision.transforms.Resize(size=(self.img_size_preprocess, self.img_size_preprocess)),
@@ -382,7 +382,10 @@ class VGG16_classifier(nn.Module):
         ])
         
         self.vgg16.classifier = nn.Sequential(
-            nn.Linear(25088, self.hidden_size*2),
+            nn.Linear(25088, self.hidden_size*4),
+            nn.ReLU(),
+            nn.Dropout(self.dropout),
+            nn.Linear(self.hidden_size*4, self.hidden_size*2),
             nn.ReLU(),
             nn.Dropout(self.dropout),
             nn.Linear(self.hidden_size*2, self.hidden_size),
