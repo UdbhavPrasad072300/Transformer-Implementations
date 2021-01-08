@@ -4,7 +4,7 @@ Transformer Implementations and some examples with them
 
 Implemented:
 <ul>
-  <li>Vanilla Transformer<li>
+  <li>Vanilla Transformer</li>
   <li>ViT - Vision Transformers</li>
   <li>DeiT - Data efficient image Transformers</li>
 </ul>
