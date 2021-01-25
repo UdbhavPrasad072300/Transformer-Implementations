@@ -16,7 +16,7 @@ classifiers = [
 
 setup(
     name='transformer_implementations',
-    version='0.0.2',
+    version='0.0.5',
     description='A bunch of transformer implementations',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -24,8 +24,7 @@ setup(
     author_email='udbhavprasad072300@gmail.com',
     url='https://github.com/UdbhavPrasad072300/Transformer-Implementations',
     license='MIT',
-    py_modules=["transformers"],
+    py_modules=[""],
     classifiers=classifiers,
-    package=find_packages(),
-    package_dir={'': 'src'},
-)
+    packages=find_packages(),
+    )
