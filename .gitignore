@@ -136,3 +136,6 @@ data/
 .trained_models/
 *.pt
 *.pth
+
+# Visual Studio Code
+.vscode/
