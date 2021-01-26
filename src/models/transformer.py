@@ -10,6 +10,18 @@ import math
 
 
 class MultiHeadAttention(nn.Module):
+    r"""Multiheaded Attention
+
+    .. math::
+        \text{MultiHeadAttention}(Q, K, V) = \text{softmax}
+
+    Args:
+        embed_size (int): Embedding Size of Input
+        num_heads (int): Number of heads in Multi-headed Attention; Number of Splits in the Embedding Size
+        dropout (float, optional): Percentage of Dropout to be applied in range 0 <= dropout <=1
+        batch_dim (int, optional): The dimension in which batch dimensions is
+
+    """
     def __init__(self, embed_size, num_heads, dropout=0.2, batch_dim=0):
         super(MultiHeadAttention, self).__init__()
 

@@ -1,2 +1,2 @@
 torchvision~=0.8.1
-setuptools~=51.0.0
+setuptools~=51.3.3
