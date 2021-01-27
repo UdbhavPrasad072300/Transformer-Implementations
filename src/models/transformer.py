@@ -10,10 +10,10 @@ import math
 
 
 class MultiHeadAttention(nn.Module):
-    r"""Multiheaded Attention
+    r"""Multi-headed Attention for input Query, Key, Value
 
-    .. math::
-        \text{MultiHeadAttention}(Q, K, V) = \text{softmax}
+    Multi-headed Attention is a module for attention mechanisms which runs through attention in several times in
+    parallel, then the multiple outputs are concatenated and linearly transformed
 
     Args:
         embed_size (int): Embedding Size of Input
@@ -22,6 +22,7 @@ class MultiHeadAttention(nn.Module):
         batch_dim (int, optional): The dimension in which batch dimensions is
 
     """
+
     def __init__(self, embed_size, num_heads, dropout=0.2, batch_dim=0):
         super(MultiHeadAttention, self).__init__()
 
@@ -97,6 +98,17 @@ class MultiHeadAttention(nn.Module):
 
 # https://pytorch.org/tutorials/beginner/transformer_tutorial.html
 class PositionalEncoding(nn.Module):
+    r"""Positional Encoding for Embedded Input
+
+        Positional Encoding with sine and cosine functions of different frequencies
+
+        Args:
+            max_len (int, optional): max length to be Encoded
+            d_model (int, optional): Embedding size of input
+            dropout (float, optional): Percentage of Dropout to be applied in range 0 <= dropout <=1
+
+    """
+
     def __init__(self, max_len=5000, d_model=300, dropout=0.1, device="cpu"):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
@@ -115,6 +127,19 @@ class PositionalEncoding(nn.Module):
 
 
 class Transformer_Encoder(nn.Module):
+    r"""Transformer Encoder Layer
+
+        Transformer Encoder Layer consisting of multi-headed attention and a feed forward neural network with residual
+        connections and Layer Normalization
+
+        Args:
+            embed_size (int): max length to be Encoded
+            num_heads (int): Number of heads in Multi-Headed Attention
+            ff_hidden_size (int): Number of Hidden Units in Feed Forward Network
+            dropout (float, optional): Percentage of Dropout to be applied in range 0 <= dropout <=1
+            device (str, optional): Device model to be computed in
+    """
+
     def __init__(self, embed_size, num_heads, ff_hidden_size, dropout=0.2, device="cpu"):
         super(Transformer_Encoder, self).__init__()
 
@@ -414,6 +439,25 @@ class VGG16_classifier(nn.Module):
 
 
 class DeiT(nn.Module):
+    r"""Data-efficient image Transformer Implementation
+
+        The Data-efficient image Transformer (DeiT) is for multi-class image classification which is trained through
+        data distillation
+
+        Args:
+            image_size (int): Input Image height/width size
+            channel_size (int): Number of Channels in Input Image
+            patch_size (int): Size of Each Patch for Input Image
+            embed_size (int): Embedding Size of Input
+            num_heads (int): Number of Heads in Multi-Headed Attention
+            classes (int): Number in of distinct classes for classification
+            num_layers (int): Number of Encoder Blocks in DeiT
+            hidden_size (int): Number of hidden units in feed forward of encoder
+            teacher_model (object): Teacher model for Data Distillation
+            dropout (float, optional): Percentage of Dropout to be applied in range 0 <= dropout <=1
+
+    """
+
     def __init__(self, image_size, channel_size, patch_size, embed_size, num_heads, classes, num_layers,
                  hidden_size, teacher_model, dropout=0.1):
         super(DeiT, self).__init__()

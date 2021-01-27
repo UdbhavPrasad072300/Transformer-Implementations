@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.transformer import Transformer, ViT
+from src.models.transformer import Transformer, ViT
 
 torch.manual_seed(0)
 
@@ -17,6 +17,10 @@ def test(size):
 
     print("Output Dimensions: {}".format(out.size()))
     print("-" * 100)
+
+
+def main():
+    return
 
 
 if __name__ == "__main__":
