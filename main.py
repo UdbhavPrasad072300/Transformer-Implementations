@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.models.transformer import Transformer, ViT
+from transformer_package.models.transformer import Transformer, ViT
 
 torch.manual_seed(0)
 
