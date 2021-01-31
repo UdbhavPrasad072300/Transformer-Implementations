@@ -60,7 +60,7 @@ class MultiHeadAttention(nn.Module):
         k = self.K(k).reshape(k_batch_size, k_seq_len, self.num_heads, self.head_size)
         v = self.V(v).reshape(v_batch_size, v_seq_len, self.num_heads, self.head_size)
 
-        scores = self.attention(q, k, v, self.num_heads, mask)
+        scores = self.attention(q, k, v, self.head_size, mask)
         concatenated = scores.reshape(v_batch_size, -1, self.embed_size)
 
         out = self.linear(concatenated)
