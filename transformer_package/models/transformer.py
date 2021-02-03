@@ -60,9 +60,8 @@ class MultiHeadAttention(nn.Module):
         k = self.K(k).reshape(k_batch_size, k_seq_len, self.num_heads, self.head_size)
         v = self.V(v).reshape(v_batch_size, v_seq_len, self.num_heads, self.head_size)
 
-        scores = self.attention(q, k, v, self.head_size, mask)
-        concatenated = scores.reshape(v_batch_size, -1, self.embed_size)
-
+        attention = self.attention(q, k, v, mask=mask)
+        concatenated = attention.reshape(v_batch_size, -1, self.embed_size)
         out = self.linear(concatenated)
 
         return out
@@ -72,28 +71,27 @@ class MultiHeadAttention(nn.Module):
         k_seq_len, k_batch_size, k_embed_size = k.size()
         v_seq_len, v_batch_size, v_embed_size = v.size()
 
-        q = self.Q(q).reshape(q_batch_size, q_seq_len, self.num_heads, self.head_size)
-        k = self.K(k).reshape(k_batch_size, k_seq_len, self.num_heads, self.head_size)
-        v = self.V(v).reshape(v_batch_size, v_seq_len, self.num_heads, self.head_size)
+        q = self.Q(q).reshape(q_seq_len, q_batch_size, self.num_heads, self.head_size).transpose(0, 1)
+        k = self.K(k).reshape(k_seq_len, k_batch_size, self.num_heads, self.head_size).transpose(0, 1)
+        v = self.V(v).reshape(v_seq_len, v_batch_size, self.num_heads, self.head_size).transpose(0, 1)
 
-        scores = self.attention(q, k, v, self.num_heads, mask)
-        concatenated = scores.reshape(-1, v_batch_size, self.embed_size)
+        attention = self.attention(q, k, v, mask=mask)
+        concatenated = attention.reshape(-1, v_batch_size, self.embed_size)
 
         out = self.linear(concatenated)
 
         return out
 
-    def attention(self, q, k, v, d_k, mask=None):
-        scores = torch.einsum("bqhe,bkhe->bhqk", [q, k]) / math.sqrt(d_k)
+    def attention(self, q, k, v, mask=None):
+        scores = torch.einsum("bqhe,bkhe->bhqk", [q, k]) / math.sqrt(self.embed_size)
 
         # if mask is not None:
         #    scores = scores.masked_fill(mask == 0, -1e9)
 
         scores = F.softmax(scores, dim=-1)
         scores = self.dropout_layer(scores)
-        out = torch.einsum("bhql,blhd->bqhd", [scores, v])
-
-        return out
+        attention = torch.einsum("bhql,blhd->bqhd", [scores, v])
+        return attention
 
 
 # https://pytorch.org/tutorials/beginner/transformer_tutorial.html
