@@ -83,11 +83,12 @@ class MultiHeadAttention(nn.Module):
         return out
 
     def attention(self, q, k, v, mask=None):
-        scores = torch.einsum("bqhe,bkhe->bhqk", [q, k]) / math.sqrt(self.embed_size)
+        scores = torch.einsum("bqhe,bkhe->bhqk", [q, k])
 
-        # if mask is not None:
-        #    scores = scores.masked_fill(mask == 0, -1e9)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, -1e9)
 
+        scores /= math.sqrt(self.embed_size)
         scores = F.softmax(scores, dim=-1)
         scores = self.dropout_layer(scores)
         attention = torch.einsum("bhql,blhd->bqhd", [scores, v])
@@ -150,7 +151,7 @@ class Transformer_Encoder(nn.Module):
         self.Norm1 = nn.LayerNorm(self.embed_size)
         self.Norm2 = nn.LayerNorm(self.embed_size)
 
-        self.multi_attention = nn.MultiheadAttention(self.embed_size, self.num_heads, self.dropout)
+        self.multi_attention = MultiHeadAttention(self.embed_size, self.num_heads, self.dropout, batch_dim=1)
 
         self.feed_forward = nn.Sequential(
             nn.Linear(self.embed_size, self.ff_hidden_size),
@@ -161,7 +162,7 @@ class Transformer_Encoder(nn.Module):
         self.dropout_layer = nn.Dropout(self.dropout)
 
     def forward(self, x, mask=None):
-        attention, _ = self.multi_attention(x, x, x, mask)
+        attention = self.multi_attention(x, x, x, mask)
         x = self.dropout_layer(self.Norm1(x + attention))
         x = self.dropout_layer(self.Norm2(x + self.feed_forward(x)))
         return x
@@ -177,8 +178,8 @@ class Transformer_Decoder(nn.Module):
         self.dropout = dropout
         self.device = device
 
-        self.masked_multiheadattention = nn.MultiheadAttention(self.embed_size, self.num_heads, self.dropout)
-        self.multiheadattention = nn.MultiheadAttention(self.embed_size, self.num_heads, self.dropout)
+        self.masked_multiheadattention = MultiHeadAttention(self.embed_size, self.num_heads, self.dropout, batch_dim=1)
+        self.multiheadattention = MultiHeadAttention(self.embed_size, self.num_heads, self.dropout, batch_dim=1)
 
         self.Norm1 = nn.LayerNorm(self.embed_size)
         self.Norm2 = nn.LayerNorm(self.embed_size)
@@ -192,14 +193,13 @@ class Transformer_Decoder(nn.Module):
             nn.Linear(self.num_ff, self.embed_size)
         )
 
-    def forward(self, x, y, mask=None):
-        y_mask = torch.tril(torch.ones((y.size(0), y.size(0)))).to(self.device)
+    def forward(self, x, y, y_mask=None, x_mask=None):
 
-        attention1, _ = self.masked_multiheadattention(y, y, y)
+        attention1 = self.masked_multiheadattention(y, y, y, y_mask)
 
         y = self.dropout_layer(self.Norm1(y + attention1))
 
-        attention2, _ = self.multiheadattention(y, x, x)
+        attention2 = self.multiheadattention(y, x, x)
 
         x = self.dropout_layer(self.Norm2(y + attention2))
 
@@ -241,9 +241,11 @@ class Transformer(nn.Module):
                                                      self.device))
 
         self.final = nn.Linear(self.embed_size, self.t_vocab_size)
-        self.softmax = nn.LogSoftmax(dim=-1)
 
     def forward(self, x, y, mask=None):
+
+        y_mask = self.get_y_mask(y)
+
         x = self.encoder_embed(x) * math.sqrt(self.embed_size)
         y = self.decoder_embed(y) * math.sqrt(self.embed_size)
 
@@ -254,11 +256,15 @@ class Transformer(nn.Module):
             x = encoder(x)
 
         for decoder in self.decoders:
-            y = decoder(x, y)
+            y = decoder(x, y, y_mask=y_mask)
 
-        y = self.final(y)
+        y = self.dropout_layer(self.final(y))
 
-        return self.softmax(y)
+        return y
+
+    def get_y_mask(self, x):
+        s, b = x.size()
+        return torch.tril(torch.ones((s, s)).expand(b, 1, s, s)).to(self.device)
 
 
 class Transformer_with_nn(nn.Module):
