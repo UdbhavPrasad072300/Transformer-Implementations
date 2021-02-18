@@ -16,11 +16,10 @@ class MultiHeadAttention(nn.Module):
     parallel, then the multiple outputs are concatenated and linearly transformed
 
     Args:
-        embed_size (int): Embedding Size of Input
-        num_heads (int): Number of heads in Multi-headed Attention; Number of Splits in the Embedding Size
-        dropout (float, optional): Percentage of Dropout to be applied in range 0 <= dropout <=1
-        batch_dim (int, optional): The dimension in which batch dimensions is
-
+        embed_size  (int): Max embedding size
+        num_heads   (int): Number of heads in multi-headed attention; Number of splits in the embedding size
+        dropout     (float, optional): Percentage of Dropout to be applied in range 0 <= dropout <=1
+        batch_dim   (int, optional): The dimension in which batch dimensions is
     """
 
     def __init__(self, embed_size, num_heads, dropout=0.2, batch_dim=0):
@@ -102,10 +101,9 @@ class PositionalEncoding(nn.Module):
         Positional Encoding with sine and cosine functions of different frequencies
 
         Args:
-            max_len (int, optional): max length to be Encoded
+            max_len (int, optional): Max length to be encoded
             d_model (int, optional): Embedding size of input
-            dropout (float, optional): Percentage of Dropout to be applied in range 0 <= dropout <=1
-
+            dropout (float, optional): A probability from 0 to 1 which determines the dropout rate
     """
 
     def __init__(self, max_len=5000, d_model=300, dropout=0.1, device="cpu"):
@@ -132,11 +130,11 @@ class Transformer_Encoder(nn.Module):
         connections and Layer Normalization
 
         Args:
-            embed_size (int): max length to be Encoded
-            num_heads (int): Number of heads in Multi-Headed Attention
-            ff_hidden_size (int): Number of Hidden Units in Feed Forward Network
-            dropout (float, optional): Percentage of Dropout to be applied in range 0 <= dropout <=1
-            device (str, optional): Device model to be computed in
+            embed_size      (int): max embedding size
+            num_heads       (int): Number of heads in multi-headed attention
+            ff_hidden_size  (int): Number of hidden units in feed forward network
+            dropout         (float, optional): A probability from 0 to 1 which determines the dropout rate
+            device          (str, optional): Determines which device to use for computation, by default cpu
     """
 
     def __init__(self, embed_size, num_heads, ff_hidden_size, dropout=0.2, device="cpu"):
@@ -169,6 +167,18 @@ class Transformer_Encoder(nn.Module):
 
 
 class Transformer_Decoder(nn.Module):
+    r"""Transformer Decoder Layer
+
+        Transformer Decoder Layer consisting of multi-headed self-attention, a feed forward neural network with residual
+        connections and Layer Normalization, and multi-headed attention over the output of the encoder
+
+        Args:
+            embed_size  (int): Max embedding size
+            num_heads   (int): Number of heads in multi-headed attention
+            num_ff      (int): Number of hidden units in feed forward network
+            dropout     (float, optional): A probability from 0 to 1 which determines the dropout rate
+            device      (str, optional): Determines which device to use for computation, by default cpu
+    """
     def __init__(self, embed_size, num_heads, num_ff, dropout=0.1, device="cpu"):
         super(Transformer_Decoder, self).__init__()
 
@@ -209,6 +219,23 @@ class Transformer_Decoder(nn.Module):
 
 
 class Transformer(nn.Module):
+    r"""Transformer Model
+
+        Transformer Model that consists of embedding, encoders, decoders,and feed forward networks.
+        It is designed to handle sequential data.
+
+        Args:
+            s_vocab_size    (int): Sequence vocabulary size
+            t_vocab_size    (int): Transformer vocabulary size
+            embed_size      (int): Max embedding size
+            num_heads       (int): Number of heads in multi-headed attention
+            num_ff          (int): Number of feed forward networks
+            encode_layers   (int): Number of encoders in Transformer
+            decode_layers   (int): Number of decoders in Transformer
+            hidden_size     (int): Number of hidden layers
+            dropout         (float, optional): A probability from 0 to 1 which determines the dropout rate
+            device          (str, optional): Determines which device to use for computation, by default cpu
+    """
     def __init__(self, s_vocab_size, t_vocab_size, embed_size, num_heads, num_ff, encode_layers, decode_layers,
                  hidden_size, dropout=0.2, device="cpu"):
         super(Transformer, self).__init__()
@@ -321,6 +348,16 @@ class Transformer_with_nn(nn.Module):
 
 
 class VisionEncoder(nn.Module):
+    r"""Vision Encoder Model
+
+        An Encoder Layer with the added functionality to encode important local structures of a tokenized image
+
+        Args:
+            embed_size      (int): Embedding Size of Input
+            num_heads       (int): Number of heads in multi-headed attention
+            hidden_size     (int): Number of hidden layers
+            dropout         (float, optional): A probability from 0 to 1 which determines the dropout rate
+    """
     def __init__(self, embed_size, num_heads, hidden_size, dropout=0.1):
         super(VisionEncoder, self).__init__()
 
@@ -350,6 +387,20 @@ class VisionEncoder(nn.Module):
 
 
 class ViT(nn.Module):
+    r"""Vision Transformer Model
+
+        A transformer model to solve vision tasks by treating images as sequences of tokens.
+
+        Args:
+            image_size      (int): Size of input image
+            channel_size    (int): Size of the channel
+            patch_size      (int): Max patch size, determines number of split images/patches and token size
+            embed_size      (int): Embedding size of input
+            num_heads       (int): Number of heads in Multi-Headed Attention
+            classes         (int): Number of classes for classification of data
+            hidden_size     (int): Number of hidden layers
+            dropout         (float, optional): A probability from 0 to 1 which determines the dropout rate
+    """
     def __init__(self, image_size, channel_size, patch_size, embed_size, num_heads, classes, num_layers, hidden_size,
                  dropout=0.1):
         super(ViT, self).__init__()
@@ -449,16 +500,16 @@ class DeiT(nn.Module):
         data distillation
 
         Args:
-            image_size (int): Input Image height/width size
-            channel_size (int): Number of Channels in Input Image
-            patch_size (int): Size of Each Patch for Input Image
-            embed_size (int): Embedding Size of Input
-            num_heads (int): Number of Heads in Multi-Headed Attention
-            classes (int): Number in of distinct classes for classification
-            num_layers (int): Number of Encoder Blocks in DeiT
-            hidden_size (int): Number of hidden units in feed forward of encoder
-            teacher_model (object): Teacher model for Data Distillation
-            dropout (float, optional): Percentage of Dropout to be applied in range 0 <= dropout <=1
+            image_size      (int): Input Image height/width size
+            channel_size    (int): Number of Channels in Input Image
+            patch_size      (int): Size of Each Patch for Input Image
+            embed_size      (int): Max embedding size
+            num_heads       (int): Number of heads in multi-headed attention
+            classes         (int): Number in of distinct classes for classification
+            num_layers      (int): Number of encoder blocks in DeiT
+            hidden_size     (int): Number of hidden units in feed forward of encoder
+            teacher_model   (object): Teacher model for data distillation
+            dropout         (float, optional): A probability from 0 to 1 which determines the dropout rate
 
     """
 
