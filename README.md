@@ -36,6 +36,8 @@ Models trained with Implementation:
   <li><a href="https://github.com/UdbhavPrasad072300/Transformer-Implementations/blob/main/notebooks/CIFAR10%20Classification%20-%20ViT.ipynb">CIFAR10 - MultiChannel Images</a></li>
 </ul>
 
+Note: ViT will not perform great on small datasets
+
 ## Multi-class Image Classification with Data-efficient image Transformers (DeiT)
 
 from "Training data-efficient image transformers & distillation through attention": https://arxiv.org/pdf/2012.12877v1.pdf
