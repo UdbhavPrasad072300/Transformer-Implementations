@@ -1,0 +1,1 @@
+from transformer_package.loss_functions.loss import Soft_Distillation_Loss, Hard_Distillation_Loss
