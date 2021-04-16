@@ -20,9 +20,10 @@ class MultiHeadAttention(nn.Module):
         num_heads   (int): Number of heads in multi-headed attention; Number of splits in the embedding size
         dropout     (float, optional): Percentage of Dropout to be applied in range 0 <= dropout <=1
         batch_dim   (int, optional): The dimension in which batch dimensions is
+
     """
 
-    def __init__(self, embed_size, num_heads, dropout=0.2, batch_dim=0):
+    def __init__(self, embed_size: int, num_heads: int, dropout: float = 0.2, batch_dim: int=0):
         super(MultiHeadAttention, self).__init__()
 
         self.embed_size = embed_size
@@ -104,9 +105,10 @@ class PositionalEncoding(nn.Module):
             max_len (int, optional): Max length to be encoded
             d_model (int, optional): Embedding size of input
             dropout (float, optional): A probability from 0 to 1 which determines the dropout rate
+
     """
 
-    def __init__(self, max_len=5000, d_model=300, dropout=0.1, device="cpu"):
+    def __init__(self, max_len: int = 5000, d_model: int = 300, dropout: float = 0.1, device="cpu"):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -135,9 +137,11 @@ class Transformer_Encoder(nn.Module):
             ff_hidden_size  (int): Number of hidden units in feed forward network
             dropout         (float, optional): A probability from 0 to 1 which determines the dropout rate
             device          (str, optional): Determines which device to use for computation, by default cpu
+
     """
 
-    def __init__(self, embed_size, num_heads, ff_hidden_size, dropout=0.2, batch_dim=1, device="cpu"):
+    def __init__(self, embed_size: int, num_heads: int, ff_hidden_size: int, dropout: float = 0.2, batch_dim: int = 1,
+                 device: str = "cpu"):
         super(Transformer_Encoder, self).__init__()
 
         self.embed_size = embed_size
@@ -182,8 +186,10 @@ class Transformer_Decoder(nn.Module):
             num_ff      (int): Number of hidden units in feed forward network
             dropout     (float, optional): A probability from 0 to 1 which determines the dropout rate
             device      (str, optional): Determines which device to use for computation, by default cpu
+
     """
-    def __init__(self, embed_size, num_heads, num_ff, dropout=0.1, device="cpu"):
+
+    def __init__(self, embed_size: int, num_heads: int, num_ff: int, dropout: float = 0.1, device: str = "cpu"):
         super(Transformer_Decoder, self).__init__()
 
         self.embed_size = embed_size
@@ -208,7 +214,6 @@ class Transformer_Decoder(nn.Module):
         )
 
     def forward(self, x, y, y_mask=None, x_mask=None):
-
         attention1 = self.masked_multiheadattention(y, y, y, y_mask)
 
         y = self.dropout_layer(self.Norm1(y + attention1))
@@ -239,9 +244,11 @@ class Transformer(nn.Module):
             hidden_size     (int): Number of hidden layers
             dropout         (float, optional): A probability from 0 to 1 which determines the dropout rate
             device          (str, optional): Determines which device to use for computation, by default cpu
+
     """
-    def __init__(self, s_vocab_size, t_vocab_size, embed_size, num_heads, num_ff, encode_layers, decode_layers,
-                 hidden_size, dropout=0.2, device="cpu"):
+
+    def __init__(self, s_vocab_size: int, t_vocab_size: int, embed_size: int, num_heads: int, num_ff: int,
+                 encode_layers: int, decode_layers: int, hidden_size: int, dropout: float = 0.2, device: str = "cpu"):
         super(Transformer, self).__init__()
 
         self.s_vocab_size = s_vocab_size
@@ -299,8 +306,8 @@ class Transformer(nn.Module):
 
 
 class Transformer_with_nn(nn.Module):
-    def __init__(self, s_vocab_size, t_vocab_size, embed_size, num_head, num_ff, encode_layers, decode_layers,
-                 dropout=0.2, device="cpu"):
+    def __init__(self, s_vocab_size: int, t_vocab_size: int, embed_size: int, num_head: int, num_ff: int,
+                 encode_layers: int, decode_layers: int, dropout: float = 0.2, device: str = "cpu"):
         super(Transformer_with_nn, self).__init__()
 
         self.s_vocab_size = s_vocab_size
@@ -361,8 +368,10 @@ class VisionEncoder(nn.Module):
             num_heads       (int): Number of heads in multi-headed attention
             hidden_size     (int): Number of hidden layers
             dropout         (float, optional): A probability from 0 to 1 which determines the dropout rate
+
     """
-    def __init__(self, embed_size, num_heads, hidden_size, dropout=0.1):
+
+    def __init__(self, embed_size: int, num_heads: int, hidden_size: int, dropout: float = 0.1):
         super(VisionEncoder, self).__init__()
 
         self.embed_size = embed_size
@@ -376,10 +385,10 @@ class VisionEncoder(nn.Module):
         self.attention = MultiHeadAttention(self.embed_size, self.num_heads, dropout=dropout)
 
         self.mlp = nn.Sequential(
-            nn.Linear(self.embed_size, 4*self.embed_size),
+            nn.Linear(self.embed_size, 4 * self.embed_size),
             nn.GELU(),
             nn.Dropout(self.dropout),
-            nn.Linear(4*self.embed_size, self.embed_size),
+            nn.Linear(4 * self.embed_size, self.embed_size),
             nn.Dropout(self.dropout)
         )
 
@@ -404,9 +413,11 @@ class ViT(nn.Module):
             classes         (int): Number of classes for classification of data
             hidden_size     (int): Number of hidden layers
             dropout         (float, optional): A probability from 0 to 1 which determines the dropout rate
+
     """
-    def __init__(self, image_size, channel_size, patch_size, embed_size, num_heads, classes, num_layers, hidden_size,
-                 dropout=0.1):
+
+    def __init__(self, image_size: int, channel_size: int, patch_size: int, embed_size: int, num_heads: int,
+                 classes: int, num_layers: int, hidden_size: int, dropout: float = 0.1):
         super(ViT, self).__init__()
 
         self.p = patch_size
@@ -466,7 +477,7 @@ class VGG16_classifier(nn.Module):
         self.img_size_preprocess = img_size_preprocess
         self.preprocess_flag = preprocess_flag
         self.dropout = dropout
-        
+
         self.vgg16 = models.vgg16(pretrained=True)
 
         for parameter in self.vgg16.parameters():
@@ -476,15 +487,15 @@ class VGG16_classifier(nn.Module):
             torchvision.transforms.Resize(size=(self.img_size_preprocess, self.img_size_preprocess)),
             torchvision.transforms.ToTensor()
         ])
-        
+
         self.vgg16.classifier = nn.Sequential(
-            nn.Linear(25088, self.hidden_size*4),
+            nn.Linear(25088, self.hidden_size * 4),
             nn.ReLU(),
             nn.Dropout(self.dropout),
-            nn.Linear(self.hidden_size*4, self.hidden_size*2),
+            nn.Linear(self.hidden_size * 4, self.hidden_size * 2),
             nn.ReLU(),
             nn.Dropout(self.dropout),
-            nn.Linear(self.hidden_size*2, self.hidden_size),
+            nn.Linear(self.hidden_size * 2, self.hidden_size),
             nn.ReLU(),
             nn.Dropout(self.dropout),
             nn.Linear(self.hidden_size, self.classes)
@@ -517,8 +528,8 @@ class DeiT(nn.Module):
 
     """
 
-    def __init__(self, image_size, channel_size, patch_size, embed_size, num_heads, classes, num_layers,
-                 hidden_size, teacher_model, dropout=0.1):
+    def __init__(self, image_size: int, channel_size: int, patch_size: int, embed_size: int, num_heads: int,
+                 classes: int, num_layers: int, hidden_size: int, teacher_model, dropout: float = 0.1):
         super(DeiT, self).__init__()
 
         self.image_size = image_size
@@ -541,7 +552,7 @@ class DeiT(nn.Module):
         self.class_token = nn.Parameter(torch.randn(1, 1, self.embed_size))
         self.distillation_token = nn.Parameter(torch.randn(1, 1, self.embed_size))
         self.positional_encoding = nn.Parameter(torch.randn(1, self.num_patches + 2, self.embed_size))
-        
+
         self.teacher_model = teacher_model
         for parameter in self.teacher_model.parameters():
             parameter.requires_grad = False
@@ -570,7 +581,7 @@ class DeiT(nn.Module):
 
         distillation_token = self.class_token.expand(b, 1, e)
         x = torch.cat((x, distillation_token), dim=1)
-        
+
         x = self.dropout_layer(x + self.positional_encoding)
 
         for encoder in self.encoders:
@@ -599,7 +610,8 @@ class BERT(nn.Module):
 
     """
 
-    def __init__(self, classes, embed_size, num_layers, num_heads, hidden_size, dropout=0.2, device="cpu"):
+    def __init__(self, classes: int, embed_size: int, num_layers: int, num_heads: int, hidden_size: int,
+                 dropout: float = 0.2, device="cpu"):
         super(BERT, self).__init__()
 
         self.embed_size = embed_size

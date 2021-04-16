@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class Soft_Distillation_Loss(nn.Module):
-    def __init__(self, lambda_balancing):
+    def __init__(self, lambda_balancing: float):
         super(Soft_Distillation_Loss, self).__init__()
 
         self.lambda_balancing = lambda_balancing
