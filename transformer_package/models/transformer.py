@@ -137,19 +137,23 @@ class Transformer_Encoder(nn.Module):
             device          (str, optional): Determines which device to use for computation, by default cpu
     """
 
-    def __init__(self, embed_size, num_heads, ff_hidden_size, dropout=0.2, device="cpu"):
+    def __init__(self, embed_size, num_heads, ff_hidden_size, dropout=0.2, batch_dim=1, device="cpu"):
         super(Transformer_Encoder, self).__init__()
 
         self.embed_size = embed_size
         self.num_heads = num_heads
         self.ff_hidden_size = ff_hidden_size
         self.dropout = dropout
+        self.batch_dim = batch_dim
         self.device = device
 
         self.Norm1 = nn.LayerNorm(self.embed_size)
         self.Norm2 = nn.LayerNorm(self.embed_size)
 
-        self.multi_attention = MultiHeadAttention(self.embed_size, self.num_heads, self.dropout, batch_dim=1)
+        self.multi_attention = MultiHeadAttention(self.embed_size,
+                                                  self.num_heads,
+                                                  self.dropout,
+                                                  batch_dim=self.batch_dim)
 
         self.feed_forward = nn.Sequential(
             nn.Linear(self.embed_size, self.ff_hidden_size),
@@ -494,7 +498,7 @@ class VGG16_classifier(nn.Module):
 
 
 class DeiT(nn.Module):
-    r"""Data-efficient image Transformer Implementation
+    r"""Data-efficient image Transformer (DeiT) Implementation
 
         The Data-efficient image Transformer (DeiT) is for multi-class image classification which is trained through
         data distillation
@@ -580,7 +584,22 @@ class DeiT(nn.Module):
 
 
 class BERT(nn.Module):
-    def __init__(self, embed_size, num_layers, num_heads, hidden_size, dropout=0.2, device="cpu"):
+    r"""Bidirectional Encoder Representations from Transformers (BERT) Implementation
+
+            The Bidirectional Encoder Representations from Transformers (BERT) is for binary/multi-class image
+            classification once pre-trained
+
+            Args:
+                classes         (int): Number in of distinct classes for classification
+                embed_size      (int): Max embedding size
+                num_layers      (int): Number of encoder blocks in BERT
+                num_heads       (int): Number of heads in multi-headed attention
+                hidden_size     (int): Number of hidden units in feed forward of encoder
+                dropout         (float, optional): A probability from 0 to 1 which determines the dropout rate
+
+    """
+
+    def __init__(self, classes, embed_size, num_layers, num_heads, hidden_size, dropout=0.2, device="cpu"):
         super(BERT, self).__init__()
 
         self.embed_size = embed_size
@@ -588,17 +607,29 @@ class BERT(nn.Module):
         self.num_heads = num_heads
         self.hidden_size = hidden_size
         self.dropout = dropout
+        self.classes = classes
 
         self.encoder_embed = nn.Embedding(self.s_vocab_size, embed_size)
         self.encoder_positional_encoding = PositionalEncoding(self.s_vocab_size, self.embed_size, device=device)
 
+        self.class_token = nn.Parameter(torch.randn(1, 1, self.embed_size))
+
         self.encoders = nn.ModuleList([])
         for layer in range(self.num_layers):
-            self.encoders.append(Transformer_Encoder(self.embed_size, self.num_heads, self.hidden_size, self.dropout))
+            self.encoders.append(Transformer_Encoder(self.embed_size,
+                                                     self.num_heads,
+                                                     self.hidden_size,
+                                                     self.dropout,
+                                                     batch_dim=0))
 
     def forward(self, x):
         x = self.encoder_embed(x) * math.sqrt(self.embed_size)
         x = self.encoder_positional_encoding(x)
+
+        b, n, e = x.size()
+
+        class_token = self.class_token.expand(b, 1, e)
+        x = torch.cat((x, class_token), dim=1)
 
         for encoder in self.encoders:
             x = encoder(x)
