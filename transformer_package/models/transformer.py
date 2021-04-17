@@ -23,7 +23,7 @@ class MultiHeadAttention(nn.Module):
 
     """
 
-    def __init__(self, embed_size: int, num_heads: int, dropout: float = 0.2, batch_dim: int=0):
+    def __init__(self, embed_size: int, num_heads: int, dropout: float = 0.2, batch_dim: int = 0):
         super(MultiHeadAttention, self).__init__()
 
         self.embed_size = embed_size
@@ -189,17 +189,21 @@ class Transformer_Decoder(nn.Module):
 
     """
 
-    def __init__(self, embed_size: int, num_heads: int, num_ff: int, dropout: float = 0.1, device: str = "cpu"):
+    def __init__(self, embed_size: int, num_heads: int, num_ff: int, dropout: float = 0.1, batch_dim: int = 1,
+                 device: str = "cpu"):
         super(Transformer_Decoder, self).__init__()
 
         self.embed_size = embed_size
         self.num_heads = num_heads
         self.num_ff = num_ff
         self.dropout = dropout
+        self.batch_dim = batch_dim
         self.device = device
 
-        self.masked_multiheadattention = MultiHeadAttention(self.embed_size, self.num_heads, self.dropout, batch_dim=1)
-        self.multiheadattention = MultiHeadAttention(self.embed_size, self.num_heads, self.dropout, batch_dim=1)
+        self.masked_multiheadattention = MultiHeadAttention(self.embed_size, self.num_heads, self.dropout,
+                                                            batch_dim=self.batch_dim)
+        self.multiheadattention = MultiHeadAttention(self.embed_size, self.num_heads, self.dropout,
+                                                     batch_dim=self.batch_dim)
 
         self.Norm1 = nn.LayerNorm(self.embed_size)
         self.Norm2 = nn.LayerNorm(self.embed_size)
@@ -601,6 +605,7 @@ class BERT(nn.Module):
             classification once pre-trained
 
             Args:
+                vocab_size      (int): Transformer Vocabulary Size
                 classes         (int): Number in of distinct classes for classification
                 embed_size      (int): Max embedding size
                 num_layers      (int): Number of encoder blocks in BERT
@@ -610,10 +615,11 @@ class BERT(nn.Module):
 
     """
 
-    def __init__(self, classes: int, embed_size: int, num_layers: int, num_heads: int, hidden_size: int,
+    def __init__(self, vocab_size: int, classes: int, embed_size: int, num_layers: int, num_heads: int, hidden_size: int,
                  dropout: float = 0.2, device="cpu"):
         super(BERT, self).__init__()
 
+        self.vocab_size = vocab_size
         self.embed_size = embed_size
         self.num_layers = num_layers
         self.num_heads = num_heads
@@ -621,8 +627,8 @@ class BERT(nn.Module):
         self.dropout = dropout
         self.classes = classes
 
-        self.encoder_embed = nn.Embedding(self.s_vocab_size, embed_size)
-        self.encoder_positional_encoding = PositionalEncoding(self.s_vocab_size, self.embed_size, device=device)
+        self.encoder_embed = nn.Embedding(self.vocab_size, embed_size)
+        self.encoder_positional_encoding = PositionalEncoding(self.vocab_size, self.embed_size, device=device)
 
         self.class_token = nn.Parameter(torch.randn(1, 1, self.embed_size))
 
@@ -647,3 +653,69 @@ class BERT(nn.Module):
             x = encoder(x)
 
         return x
+
+
+class GPT(nn.Module):
+    r"""Generative Pre-trained Transformer (GPT) Implementation
+
+            The Generative Pre-trained Transformer 3 (GPT-3) is a language model transformer that is pretrained then
+            applied for a variety of Natural Language Processing tasks
+
+            Args:
+                vocab_size      (int): Transformer Vocabulary Size
+                embed_size      (int): Max embedding size
+                num_layers      (int): Number of encoder blocks in BERT
+                num_heads       (int): Number of heads in multi-headed attention
+                hidden_size     (int): Number of hidden units in feed forward of encoder
+                dropout         (float, optional): A probability from 0 to 1 which determines the dropout rate
+                device          (str, optional): device to perform computations, defaults to CPU
+
+    """
+
+    def __init__(self, vocab_size, embed_size: int, num_layers: int, num_heads: int, hidden_size: int,
+                 dropout: float = 0.2, device="cpu"):
+        super(GPT, self).__init__()
+
+        self.vocab_size = vocab_size
+        self.embed_size = embed_size
+        self.num_layers = num_layers
+        self.num_heads = num_heads
+        self.hidden_size = hidden_size
+        self.dropout = dropout
+        self.device = device
+
+        self.decoder_embed = nn.Embedding(self.vocab_size, embed_size)
+        self.decoder_positional_encoding = PositionalEncoding(self.vocab_size, self.embed_size, device=device)
+
+        self.class_token = nn.Parameter(torch.randn(1, 1, self.embed_size))
+
+        self.decoders = nn.ModuleList([])
+        for layer in range(self.num_layers):
+            self.decoders.append(Transformer_Decoder(self.embed_size,
+                                                     self.num_heads,
+                                                     self.hidden_size,
+                                                     self.dropout,
+                                                     batch_dim=0))
+
+    def forward(self, x, y):
+        y_mask = self.get_y_mask(y)
+
+        x = self.decoder_embed(x) * math.sqrt(self.embed_size)
+        y = self.decoder_embed(y) * math.sqrt(self.embed_size)
+
+        x = self.decoder_positional_encoding(x)
+        y = self.decoder_positional_encoding(y)
+
+        b, n, e = x.size()
+
+        class_token = self.class_token.expand(b, 1, e)
+        x = torch.cat((x, class_token), dim=1)
+
+        for decoder in self.decoders:
+            x = decoder(x, y, y_mask=y_mask)
+
+        return x
+
+    def get_y_mask(self, x):
+        b, s = x.size()
+        return torch.tril(torch.ones((s, s)).expand(b, 1, s, s)).to(self.device)
