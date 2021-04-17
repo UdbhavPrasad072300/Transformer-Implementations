@@ -1,4 +1,19 @@
-# Transformer Implementations 
+# <center>Transformer Implementations</center>
+
+<p>
+  <a href="https://github.com/UdbhavPrasad072300/Transformer-Implementations/blob/main/LICENSE">
+        <img alt="License" src="https://img.shields.io/github/license/UdbhavPrasad072300/Transformer-Implementations">
+  </a>
+  <a href="https://pypi.org/project/transformer-implementations/">
+        <img alt="PyPi Version" src="https://img.shields.io/pypi/v/transformer-implementations">
+  </a>
+  <a href="https://pypi.org/project/transformer-implementations/">
+        <img alt="PyPi Downloads" src="https://img.shields.io/pypi/dm/transformer-implementations">
+  </a>
+  <a href="https://pypi.org/project/transformer-implementations/">
+        <img alt="Package Status" src="https://img.shields.io/pypi/status/transformer-implementations">
+  </a>
+</p>
 
 Transformer Implementations and some examples with them
 
@@ -7,14 +22,54 @@ Implemented:
   <li>Vanilla Transformer</li>
   <li>ViT - Vision Transformers</li>
   <li>DeiT - Data efficient image Transformers</li>
+  <li>BERT - Bidirectional Encoder Representations from Transformers</li>
+  <li>GPT - Generative Pre-trained Transformer</li>
 </ul>
 
 ## Installation
 
-<a href="https://pypi.org/project/transformer-implementations/">PyPi Installation</a>
+<a href="https://pypi.org/project/transformer-implementations/">PyPi</a>
 
 ```bash
 $ pip install transformer-implementations
+```
+
+or
+
+```bash
+python setup.py build
+python setup.py install
+```
+
+## Example
+
+In <a href="https://github.com/UdbhavPrasad072300/Transformer-Implementations/blob/main/notebooks/">notebooks</a> directory there is a notebook on how to use each of these models for their intented use; such as image classification for Vision Transformer (ViT) and others.
+Check them out!
+
+```python
+from transformer_package.models import ViT
+
+image_size = 28 # Model Parameters
+channel_size = 1
+patch_size = 7
+embed_size = 512
+num_heads = 8
+classes = 10
+num_layers = 3
+hidden_size = 256
+dropout = 0.2
+
+model = ViT(image_size, 
+            channel_size, 
+            patch_size, 
+            embed_size, 
+            num_heads, 
+            classes, 
+            num_layers, 
+            hidden_size, 
+            dropout=dropout).to(DEVICE)
+            
+prediction = model(image_tensor)
 ```
 
 ## Language Translation
