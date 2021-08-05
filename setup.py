@@ -16,7 +16,7 @@ classifiers = [
 
 setup(
     name='transformer_implementations',
-    version='0.0.8',
+    version='0.0.9',
     description='A bunch of transformer implementations',
     long_description=long_description,
     long_description_content_type='text/markdown',
