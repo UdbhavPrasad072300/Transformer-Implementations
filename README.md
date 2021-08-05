@@ -1,4 +1,4 @@
-# <center>Transformer Implementations</center>
+# Transformer Implementations
 
 <p>
   <a href="https://github.com/UdbhavPrasad072300/Transformer-Implementations/blob/main/LICENSE">
