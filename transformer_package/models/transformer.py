@@ -465,7 +465,7 @@ class ViT(nn.Module):
         for encoder in self.encoders:
             x = encoder(x)
 
-        x = x[:, 0, :]
+        x = x[:, -1, :]
 
         x = F.log_softmax(self.classifier(self.norm(x)), dim=-1)
 
@@ -581,7 +581,7 @@ class DeiT(nn.Module):
         b, n, e = x.size()
 
         class_token = self.class_token.expand(b, 1, e)
-        x = torch.cat((x, class_token), dim=1)
+        x = torch.cat((class_token, x), dim=1)
 
         distillation_token = self.class_token.expand(b, 1, e)
         x = torch.cat((x, distillation_token), dim=1)
@@ -591,7 +591,7 @@ class DeiT(nn.Module):
         for encoder in self.encoders:
             x = encoder(x)
 
-        x = x[:, 0, :]
+        x, distillation_token = x[:, 0, :], x[:, -1, :]
 
         x = self.classifier(self.norm(x))
 
